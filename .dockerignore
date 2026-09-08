@@ -1,0 +1,12 @@
+target/
+**/target/
+.mvn/
+.git/
+.gitignore
+.DS_Store
+*.md
+docs/
+skills/
+.idea/
+*.iml
+.vscode/
