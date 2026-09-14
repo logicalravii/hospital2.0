@@ -100,4 +100,47 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.username").value("newuser"))
             .andExpect(jsonPath("$.email").value("newuser@hospital.com"));
     }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/register should return 400 when invalid role is provided")
+    void shouldReturn400OnInvalidRole() throws Exception {
+        String invalidJson = """
+            {
+              "username": "baduser",
+              "email": "bad@hospital.com",
+              "password": "Password@123",
+              "roles": ["RANDOM_ROLE"]
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(invalidJson))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Invalid role 'RANDOM_ROLE'")));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/register should accept case-insensitive role 'Admin'")
+    void shouldAcceptCaseInsensitiveRole() throws Exception {
+        UUID newId = UUID.randomUUID();
+        UserResponse userResponse = new UserResponse(newId, "adminuser", "admin@hospital.com", true, Set.of(Role.ADMIN));
+        when(authService.register(any())).thenReturn(userResponse);
+
+        String json = """
+            {
+              "username": "adminuser",
+              "email": "admin@hospital.com",
+              "password": "Password@123",
+              "roles": ["Admin"]
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.username").value("adminuser"));
+    }
 }

@@ -1,0 +1,77 @@
+### Variables
+@baseUrl = http://localhost:8082
+
+### 1. Register a Patient (Full Demographics)
+# @name registerPatient
+POST {{baseUrl}}/api/v1/patients
+Content-Type: application/json
+
+{
+  "firstName": "Robert",
+  "lastName": "Langdon",
+  "dateOfBirth": "1970-06-22",
+  "gender": "MALE",
+  "phone": "9805626007",
+  "email": "robert.langdon@harvard.edu",
+  "addressLine1": "Harvard Yard 101",
+  "city": "Cambridge",
+  "postalCode": "02138",
+  "emergencyContactName": "Vittoria Vetra",
+  "emergencyContactPhone": "+390669871234",
+  "emergencyContactRelation": "Colleague"
+}
+
+### 2. Register Another Patient (Minimal Demographics)
+POST {{baseUrl}}/api/v1/patients
+Content-Type: application/json
+
+{
+  "firstName": "Sarah",
+  "lastName": "Connor",
+  "dateOfBirth": "1985-02-28",
+  "gender": "FEMALE",
+  "phone": "+14155552671",
+  "email": "sarah.connor@example.com"
+}
+
+### 3. Get Patient by ID
+# Replace {{patientId}} with the UUID returned from registration
+@patientId = 3b8ed703-8ec6-432d-9f9a-0922a859b096
+GET {{baseUrl}}/api/v1/patients/{{patientId}}
+
+### 4. Get Patient by Medical Record Number (MRN)
+# Replace {{mrn}} with the MRN returned from registration
+@mrn = MRN-20260909-639511
+GET {{baseUrl}}/api/v1/patients/mrn/{{mrn}}
+
+### 5. Get All Patients (Paginated & Sorted)
+GET {{baseUrl}}/api/v1/patients?page=0&size=10
+
+### 6. Test Duplicate Phone Conflict (Expects HTTP 409)
+POST {{baseUrl}}/api/v1/patients
+Content-Type: application/json
+
+{
+  "firstName": "Duplicate",
+  "lastName": "Patient",
+  "dateOfBirth": "1990-01-01",
+  "gender": "MALE",
+  "phone": "+16175550199",
+  "email": "duplicate@example.com"
+}
+
+### 7. Test Validation Error (Expects HTTP 400)
+POST {{baseUrl}}/api/v1/patients
+Content-Type: application/json
+
+{
+  "firstName": "",
+  "lastName": "Test",
+  "dateOfBirth": "2099-01-01",
+  "gender": "MALE",
+  "phone": "",
+  "email": "invalid-email"
+}
+
+### 8. Test Patient Not Found (Expects HTTP 404)
+GET {{baseUrl}}/api/v1/patients/00000000-0000-0000-0000-000000000000

@@ -1,0 +1,84 @@
+### Variables
+@baseUrl = http://localhost:8081
+
+### 1. Register a Doctor User
+POST {{baseUrl}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "username": "dr_smith",
+  "email": "dr.smith@hospital.com",
+  "password": "Password@123",
+  "roles": [
+    "DOCTOR"
+  ]
+}
+
+### 2. Register a Receptionist User
+POST {{baseUrl}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "username": "receptionist_mary",
+  "email": "mary.reception@hospital.com",
+  "password": "Password@123",
+  "roles": [
+    "RECEPTIONIST"
+  ]
+}
+
+### 3. Register an Admin User
+POST {{baseUrl}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "username": "admin_hms",
+  "email": "admin@hospital.com",
+  "password": "Password@123",
+  "roles": [
+    "ADMIN"
+  ]
+}
+
+### 4. Login (Retrieve JWT Token)
+# @name login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "dr_smith",
+  "password": "Password@123"
+}
+
+### 5. Get User by ID
+# Replace {{userId}} with the UUID returned from register/login response
+@userId = 2df14a60-5703-4c90-a61b-e6f9c99b514a
+GET {{baseUrl}}/api/v1/auth/users/{{userId}}
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### 6. Register with Case-Insensitive Role (e.g. "Admin") - Expects 201 Created
+POST {{baseUrl}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "username": "admin_case_test",
+  "email": "case.admin@hospital.com",
+  "password": "Password@123",
+  "roles": [
+    "Admin"
+  ]
+}
+
+### 7. Register with Invalid / Random Role - Expects 400 Bad Request
+POST {{baseUrl}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "username": "bad_role_user",
+  "email": "bad.role@hospital.com",
+  "password": "Password@123",
+  "roles": [
+    "random_role"
+  ]
+}
+

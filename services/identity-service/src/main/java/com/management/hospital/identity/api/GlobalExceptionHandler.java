@@ -72,6 +72,52 @@ public class GlobalExceptionHandler {
             .body(new ApiErrorResponse(ErrorCode.VALIDATION_FAILED, "Request validation failed", request.getRequestURI(), fieldErrors));
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoResourceFound(org.springframework.web.servlet.resource.NoResourceFoundException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(new ApiErrorResponse(ErrorCode.RESOURCE_NOT_FOUND, "Path not found: " + request.getRequestURI(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleHttpMessageNotReadable(org.springframework.http.converter.HttpMessageNotReadableException ex, HttpServletRequest request) {
+        log.warn("Malformed HTTP request body on {}: {}", request.getRequestURI(), ex.getMessage());
+        String message = "Malformed JSON request or invalid input format";
+
+        Throwable rootCause = ex.getMostSpecificCause();
+        if (rootCause instanceof tools.jackson.databind.exc.InvalidFormatException ife) {
+            Class<?> targetType = ife.getTargetType();
+            if (targetType != null && targetType.isEnum()) {
+                String allowed = java.util.Arrays.stream(targetType.getEnumConstants())
+                    .map(Object::toString)
+                    .collect(java.util.stream.Collectors.joining(", "));
+                message = String.format("Invalid value '%s' for %s. Allowed values are: [%s]",
+                    ife.getValue(), targetType.getSimpleName(), allowed);
+            } else {
+                message = String.format("Invalid value '%s' for field of type %s",
+                    ife.getValue(), targetType != null ? targetType.getSimpleName() : "unknown");
+            }
+        } else if (rootCause instanceof IllegalArgumentException iae) {
+            message = iae.getMessage();
+        } else if (rootCause != null && rootCause.getMessage() != null) {
+            String causeMsg = rootCause.getMessage();
+            if (causeMsg.contains("Cannot deserialize value of type") && causeMsg.contains("Enum class: [")) {
+                int enumStart = causeMsg.indexOf("Enum class: [");
+                String allowed = causeMsg.substring(enumStart + 12);
+                int end = allowed.indexOf("]");
+                if (end != -1) {
+                    allowed = allowed.substring(0, end + 1);
+                }
+                message = "Invalid enum value. Allowed values are: " + allowed;
+            } else {
+                int locIndex = causeMsg.indexOf("\n at [Source:");
+                message = (locIndex != -1) ? causeMsg.substring(0, locIndex).trim() : causeMsg;
+            }
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(new ApiErrorResponse(ErrorCode.VALIDATION_FAILED, message, request.getRequestURI()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception occurred on {}", request.getRequestURI(), ex);
@@ -79,3 +125,4 @@ public class GlobalExceptionHandler {
             .body(new ApiErrorResponse(ErrorCode.INTERNAL_SERVER_ERROR, "An internal server error occurred", request.getRequestURI()));
     }
 }
+

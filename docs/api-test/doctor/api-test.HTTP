@@ -1,0 +1,93 @@
+### Variables
+@baseUrl = http://localhost:8083
+
+### 1. Register a Doctor (General Medicine)
+# @name registerDoctor1
+POST {{baseUrl}}/api/v1/doctors
+Content-Type: application/json
+
+{
+  "licenseNumber": "MD-NY-10293",
+  "firstName": "Gregory",
+  "lastName": "House",
+  "specialty": "GENERAL_MEDICINE",
+  "email": "house@hospital.com",
+  "phone": "+16095551234",
+  "consultationFee": 250.00,
+  "roomNumber": "Suite 101"
+}
+
+### 2. Register a Doctor (Cardiology - Case Insensitive)
+# @name registerDoctor2
+POST {{baseUrl}}/api/v1/doctors
+Content-Type: application/json
+
+{
+  "licenseNumber": "MD-NJ-20491",
+  "firstName": "Allison",
+  "lastName": "Cameron",
+  "specialty": "Cardiology",
+  "email": "cameron@hospital.com",
+  "phone": "+16095555678",
+  "consultationFee": 180.00,
+  "roomNumber": "Room 202"
+}
+
+### 3. Get Doctor by ID
+# Replace {{doctorId}} with the UUID from register response
+@doctorId = fb958022-f994-4e59-899e-1e46d9efd87e
+GET {{baseUrl}}/api/v1/doctors/{{doctorId}}
+
+### 4. Filter Doctors by Specialty (CARDIOLOGY)
+GET {{baseUrl}}/api/v1/doctors?specialty=CARDIOLOGY
+
+### 5. Get All Doctors (Paginated & Sorted)
+GET {{baseUrl}}/api/v1/doctors?page=0&size=10
+
+### 6. Add Weekly Schedule Block for Doctor (Monday 09:00 - 12:00, 30 min slots)
+POST {{baseUrl}}/api/v1/doctors/{{doctorId}}/schedules
+Content-Type: application/json
+
+{
+  "dayOfWeek": "MONDAY",
+  "startTime": "09:00:00",
+  "endTime": "12:00:00",
+  "slotDurationMinutes": 30,
+  "maxPatients": 6
+}
+
+### 7. Get All Schedules for Doctor
+GET {{baseUrl}}/api/v1/doctors/{{doctorId}}/schedules
+
+### 8. Query Available Slots for a Specific Date
+# 2026-09-21 is a Monday
+GET {{baseUrl}}/api/v1/doctors/{{doctorId}}/slots?date=2026-09-21
+
+### 9. Test Overlapping Schedule Rejection (Expects HTTP 409 Conflict)
+POST {{baseUrl}}/api/v1/doctors/{{doctorId}}/schedules
+Content-Type: application/json
+
+{
+  "dayOfWeek": "MONDAY",
+  "startTime": "11:00:00",
+  "endTime": "13:00:00",
+  "slotDurationMinutes": 30,
+  "maxPatients": 4
+}
+
+### 10. Test Validation Error (Expects HTTP 400 Bad Request)
+POST {{baseUrl}}/api/v1/doctors
+Content-Type: application/json
+
+{
+  "licenseNumber": "",
+  "firstName": "",
+  "lastName": "House",
+  "specialty": "GENERAL_MEDICINE",
+  "email": "invalid-email",
+  "phone": "",
+  "consultationFee": -50.00
+}
+
+### 11. Test Doctor Not Found (Expects HTTP 404 Not Found)
+GET {{baseUrl}}/api/v1/doctors/00000000-0000-0000-0000-000000000000

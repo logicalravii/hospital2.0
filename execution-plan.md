@@ -13,8 +13,8 @@ This document tracks the step-by-step implementation of the Hospital Management 
 | **2** | Shared Common Module (`common`) | `COMPLETED` | Events, Error model, Security utilities, 10 tests passed |
 | **3** | Docker Infrastructure (PostgreSQL Multi-DB & Kafka) | `COMPLETED` | PostgreSQL (5 isolated DBs) & Kafka KRaft healthy |
 | **4** | Identity Service (`identity-service` :8081) | `COMPLETED` | User accounts, JWT auth, Flyway `V1`, 14 tests pass, live verified |
-| **5** | Patient Service (`patient-service` :8082) | `NOT STARTED` | Registration, MRN, Kafka Producer |
-| **6** | Doctor Service (`doctor-service` :8083) | `NOT STARTED` | Profiles, Schedules, Availability queries |
+| **5** | Patient Service (`patient-service` :8082) | `COMPLETED` | Registration, MRN, Flyway `V1`, 13 tests pass, Kafka event verified |
+| **6** | Doctor Service (`doctor-service` :8083) | `COMPLETED` | Profiles, Schedules, Flyway `V1`, 19 tests pass, slot queries verified |
 | **7** | Appointment Service (`appointment-service` :8084) | `NOT STARTED` | Booking FSM, Kafka Producer & Consumer |
 | **8** | Consultation Service (`consultation-service` :8085) | `NOT STARTED` | Clinical encounters, Vitals JSONB, Kafka |
 | **9** | API Gateway (`api-gateway` :8080) | `NOT STARTED` | Spring Cloud Gateway routing & header forward |
@@ -69,29 +69,47 @@ This document tracks the step-by-step implementation of the Hospital Management 
 - [x] Implement Domain layer: `UserAccount` aggregate, `Role` enum, password hashing invariants.
 - [x] Implement Application layer: `AuthenticationService` issuing signed JWT tokens.
 - [x] Implement REST API: `POST /api/v1/auth/login` and `POST /api/v1/auth/register`.
-- [x] Add unit and slice tests for authentication (14 tests passing).
+- [x] Add unit and slice tests for authentication (16 tests passing).
 - [x] **Verification**: Run tests and verify JWT issuance via HTTP call against live PostgreSQL `identity_db`.
 
 ---
 
 ### Step 5: Patient Service (`services/patient-service` — Port 8082)
-- [ ] Create `services/patient-service/pom.xml` and application bootstrap class.
-- [ ] Add Flyway migration `V1__init_patient.sql` (`patient` table with unique MRN).
-- [ ] Implement Domain layer: `Patient` aggregate, `EmergencyContact` value object, MRN generation.
-- [ ] Configure Kafka Producer for topic `hospital.patient.events`.
-- [ ] Implement REST API: `POST /api/v1/patients` (emits `PatientRegisteredEvent`) and `GET /api/v1/patients/{id}`.
-- [ ] Add unit and repository tests.
-- [ ] **Verification**: Register a patient and verify Kafka event publication.
+- [x] Create `services/patient-service/pom.xml` and application bootstrap class.
+- [x] Add Flyway migration `V1__init_patient.sql` (`patient` table with unique MRN, phone, and indexing).
+- [x] Implement Domain layer: `Patient` aggregate, `Address` and `EmergencyContact` value objects, `MedicalRecordNumberGenerator`.
+- [x] Configure Kafka Producer with `spring-boot-starter-kafka` for topic `hospital.patient.events`.
+- [x] Implement REST API:
+  - `POST /api/v1/patients` (registers patient, generates MRN, emits `PatientRegisteredEvent` to Kafka).
+  - `GET /api/v1/patients/{id}` (fetch patient by UUID).
+  - `GET /api/v1/patients/mrn/{mrn}` (fetch patient by MRN).
+  - `GET /api/v1/patients` (paginated patient list).
+- [x] Add 13 automated tests across domain, service, and web layers.
+- [x] **Verification**:
+  - Live PostgreSQL database migration verified (`patient` table in `patient_db`).
+  - Live REST API verified via HTTP calls (201 Created, 200 OK, 400 Bad Request, 404 Not Found, 409 Conflict).
+  - Kafka domain event publication verified on `hospital.patient.events` topic using `kafka-console-consumer`.
+  - HTTP test requests saved in [docs/api-test/patient/api-test.HTTP](file:///Users/ravikumar/Test_Application/hospital/docs/api-test/patient/api-test.HTTP).
 
 ---
 
 ### Step 6: Doctor Service (`services/doctor-service` — Port 8083)
-- [ ] Create `services/doctor-service/pom.xml` and application bootstrap class.
-- [ ] Add Flyway migration `V1__init_doctor.sql` (`doctor`, `doctor_schedule` tables).
-- [ ] Implement Domain layer: `Doctor` aggregate, `DoctorSchedule` entity, non-overlapping slot invariants.
-- [ ] Implement REST API: `POST /api/v1/doctors`, `POST /api/v1/doctors/{id}/schedules`, and `GET /api/v1/doctors/{id}/schedules`.
-- [ ] Add unit and domain tests.
-- [ ] **Verification**: Register a doctor, create schedule blocks, and query available slots.
+- [x] Create `services/doctor-service/pom.xml` and application bootstrap class.
+- [x] Add Flyway migration `V1__init_doctor.sql` (`doctor` and `doctor_schedule` tables).
+- [x] Implement Domain layer: `Doctor` aggregate, `DoctorSchedule` entity, `Specialty` enum, `TimeSlot` record, non-overlapping slot invariants.
+- [x] Implement REST API:
+  - `POST /api/v1/doctors` (register doctor profile, returns 201).
+  - `GET /api/v1/doctors/{id}` (retrieve doctor by ID, returns 200).
+  - `GET /api/v1/doctors` (list doctors with specialty filtering and pagination, returns 200).
+  - `POST /api/v1/doctors/{id}/schedules` (configure weekly hours, validates overlap, returns 201).
+  - `GET /api/v1/doctors/{id}/schedules` (list all doctor schedule blocks, returns 200).
+  - `GET /api/v1/doctors/{id}/slots?date=YYYY-MM-DD` (query available appointment slots for a specific date, returns 200).
+- [x] Add 19 automated tests across domain, service, and web layers.
+- [x] **Verification**:
+  - Flyway migration verified in live PostgreSQL `doctor_db`.
+  - Live REST API verified via HTTP calls (201 Created, 200 OK, 400 Bad Request, 404 Not Found, 409 Conflict).
+  - Date-based available slot generation verified.
+  - HTTP test requests saved in [docs/api-test/doctor/api-test.HTTP](file:///Users/ravikumar/Test_Application/hospital/docs/api-test/doctor/api-test.HTTP).
 
 ---
 
