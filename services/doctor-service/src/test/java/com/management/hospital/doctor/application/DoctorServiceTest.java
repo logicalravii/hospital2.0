@@ -97,7 +97,54 @@ class DoctorServiceTest {
 
         assertThatThrownBy(() -> doctorService.registerDoctor(request))
             .isInstanceOf(ConflictException.class)
-            .hasMessageContaining("already registered");
+            .hasMessageContaining("license number 'DOC-1234' is already registered");
+    }
+
+    @Test
+    @DisplayName("Should reject doctor registration when email already exists")
+    void shouldRejectDuplicateEmail() {
+        CreateDoctorRequest request = new CreateDoctorRequest(
+            null,
+            "DOC-5678",
+            "Robert",
+            "Chase",
+            Specialty.SURGERY,
+            "chase@princeton.edu",
+            "+16095553333",
+            new BigDecimal("220.00"),
+            null
+        );
+
+        when(doctorRepository.existsByLicenseNumber("DOC-5678")).thenReturn(false);
+        when(doctorRepository.existsByEmail("chase@princeton.edu")).thenReturn(true);
+
+        assertThatThrownBy(() -> doctorService.registerDoctor(request))
+            .isInstanceOf(ConflictException.class)
+            .hasMessageContaining("email 'chase@princeton.edu' is already registered");
+    }
+
+    @Test
+    @DisplayName("Should reject doctor registration when phone already exists")
+    void shouldRejectDuplicatePhone() {
+        CreateDoctorRequest request = new CreateDoctorRequest(
+            null,
+            "DOC-5678",
+            "Robert",
+            "Chase",
+            Specialty.SURGERY,
+            "new.email@princeton.edu",
+            "+16095553333",
+            new BigDecimal("220.00"),
+            null
+        );
+
+        when(doctorRepository.existsByLicenseNumber("DOC-5678")).thenReturn(false);
+        when(doctorRepository.existsByEmail("new.email@princeton.edu")).thenReturn(false);
+        when(doctorRepository.existsByPhone("+16095553333")).thenReturn(true);
+
+        assertThatThrownBy(() -> doctorService.registerDoctor(request))
+            .isInstanceOf(ConflictException.class)
+            .hasMessageContaining("phone number '+16095553333' is already registered");
     }
 
     @Test

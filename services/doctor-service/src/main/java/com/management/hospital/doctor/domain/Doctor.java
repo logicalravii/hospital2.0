@@ -38,7 +38,7 @@ public class Doctor {
     @Column(name = "email", nullable = false, unique = true, length = 150)
     private String email;
 
-    @Column(name = "phone", nullable = false, length = 30)
+    @Column(name = "phone", nullable = false, unique = true, length = 30)
     private String phone;
 
     @Column(name = "consultation_fee", nullable = false, precision = 10, scale = 2)

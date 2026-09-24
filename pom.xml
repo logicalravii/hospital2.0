@@ -31,8 +31,8 @@
 		<module>services/identity-service</module>
 		<module>services/patient-service</module>
 		<module>services/doctor-service</module>
-		<!-- Microservice modules will be activated sequentially as implemented:
 		<module>services/appointment-service</module>
+		<!-- Microservice modules will be activated sequentially as implemented:
 		<module>services/consultation-service</module>
 		<module>services/api-gateway</module>
 		-->

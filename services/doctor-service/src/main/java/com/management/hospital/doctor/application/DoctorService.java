@@ -47,6 +47,9 @@ public class DoctorService {
         if (doctorRepository.existsByEmail(request.email().trim().toLowerCase())) {
             throw new ConflictException("Doctor with email '%s' is already registered".formatted(request.email().trim()));
         }
+        if (doctorRepository.existsByPhone(request.phone().trim())) {
+            throw new ConflictException("Doctor with phone number '%s' is already registered".formatted(request.phone().trim()));
+        }
 
         Doctor doctor = new Doctor(
             request.userId(),

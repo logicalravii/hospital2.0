@@ -114,15 +114,25 @@ This document tracks the step-by-step implementation of the Hospital Management 
 ---
 
 ### Step 7: Appointment Service (`services/appointment-service` — Port 8084)
-- [ ] Create `services/appointment-service/pom.xml` and application bootstrap class.
-- [ ] Add Flyway migration `V1__init_appointment.sql` (`appointment` table).
-- [ ] Implement Domain layer: `Appointment` aggregate with lifecycle state machine (`SCHEDULED` -> `CONFIRMED` -> `IN_PROGRESS` -> `COMPLETED` / `CANCELLED`).
-- [ ] Implement synchronous HTTP client (with Resilience4j) to verify doctor schedule against `doctor-service`.
-- [ ] Configure Kafka Producer for `hospital.appointment.events` (`AppointmentScheduledEvent`, `AppointmentCancelledEvent`).
-- [ ] Configure Kafka Consumer for `hospital.consultation.events` to auto-complete appointments upon consultation finish.
-- [ ] Implement REST API: `POST /api/v1/appointments`, `POST /api/v1/appointments/{id}/cancel`, `GET /api/v1/appointments/{id}`.
-- [ ] Add tests for appointment state machine and scheduling invariants.
-- [ ] **Verification**: Book an appointment, verify Kafka event emitted, and test cancellation flow.
+- [x] Create `services/appointment-service/pom.xml` and application bootstrap class.
+- [x] Add Flyway migration `V1__init_appointment.sql` (`appointment` table).
+- [x] Implement Domain layer: `Appointment` aggregate with lifecycle state machine (`SCHEDULED` -> `CONFIRMED` -> `IN_PROGRESS` -> `COMPLETED` / `CANCELLED`).
+- [x] Implement synchronous HTTP client (`DoctorServiceClient` using Spring `RestClient`) to verify doctor schedule against `doctor-service`.
+- [x] Configure Kafka Producer for `hospital.appointment.events` (`AppointmentScheduledEvent`, `AppointmentCancelledEvent`).
+- [x] Configure Kafka Consumer for `hospital.consultation.events` to auto-complete appointments upon consultation finish.
+- [x] Implement REST API:
+  - `POST /api/v1/appointments` (book appointment, returns 201).
+  - `POST /api/v1/appointments/{id}/confirm` (confirm appointment, returns 200).
+  - `POST /api/v1/appointments/{id}/start` (start appointment, returns 200).
+  - `POST /api/v1/appointments/{id}/cancel` (cancel appointment with reason, returns 200).
+  - `GET /api/v1/appointments/{id}` (get appointment by ID, returns 200).
+  - `GET /api/v1/appointments` (query/filter appointments by doctor, patient, date, status with pagination, returns 200).
+- [x] Add 15 automated tests covering state machine transitions, scheduling conflict invariants, and REST controller endpoints.
+- [x] **Verification**:
+  - Flyway migration applied to live PostgreSQL `appointment_db`.
+  - Live REST endpoints verified (booking, double-booking rejection with HTTP 409 `CONFLICTING_STATE`, confirmation, start, cancellation, querying).
+  - Kafka domain event publications verified on `hospital.appointment.events` (`AppointmentScheduledEvent`, `AppointmentCancelledEvent`) via `kafka-console-consumer`.
+  - HTTP test requests saved in [docs/api-test/appointment/api-test.HTTP](file:///Users/ravikumar/Test_Application/hospital/docs/api-test/appointment/api-test.HTTP).
 
 ---
 

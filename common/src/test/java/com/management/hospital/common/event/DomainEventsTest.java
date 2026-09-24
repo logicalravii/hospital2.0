@@ -16,13 +16,12 @@ class DomainEventsTest {
     void shouldCreatePatientRegisteredEvent() {
         UUID patientId = UUID.randomUUID();
         PatientRegisteredEvent event = new PatientRegisteredEvent(
-            patientId,
-            "MRN-2026-0001",
-            "John",
-            "Doe",
-            "john.doe@example.com",
-            "+1234567890"
-        );
+                patientId,
+                "MRN-2026-0001",
+                "John",
+                "Doe",
+                "john.doe@example.com",
+                "+1234567890");
 
         assertThat(event.eventId()).isNotNull();
         assertThat(event.patientId()).isEqualTo(patientId);
@@ -42,20 +41,19 @@ class DomainEventsTest {
         Instant endTime = startTime.plus(30, ChronoUnit.MINUTES);
 
         AppointmentScheduledEvent event = new AppointmentScheduledEvent(
-            appointmentId,
-            patientId,
-            doctorId,
-            startTime,
-            endTime,
-            "GENERAL_CHECKUP"
-        );
+                appointmentId,
+                patientId,
+                doctorId,
+                startTime,
+                endTime,
+                "GENERAL_CHECKUP");
 
         assertThat(event.appointmentId()).isEqualTo(appointmentId);
         assertThat(event.patientId()).isEqualTo(patientId);
         assertThat(event.doctorId()).isEqualTo(doctorId);
         assertThat(event.appointmentType()).isEqualTo("GENERAL_CHECKUP");
         assertThat(event.eventType()).isEqualTo("APPOINTMENT_SCHEDULED");
-        assertThat(AppointmentScheduledEvent.TOPIC).isEqualTo("hospital.appointment.events");
+        assertThat(AppointmentScheduledEvent.TOPIC).isEqualTo("hospital.appointment.saga.events");
     }
 
     @Test
@@ -66,11 +64,10 @@ class DomainEventsTest {
         UUID doctorId = UUID.randomUUID();
 
         AppointmentCancelledEvent event = new AppointmentCancelledEvent(
-            appointmentId,
-            patientId,
-            doctorId,
-            "Patient emergency"
-        );
+                appointmentId,
+                patientId,
+                doctorId,
+                "Patient emergency");
 
         assertThat(event.appointmentId()).isEqualTo(appointmentId);
         assertThat(event.reason()).isEqualTo("Patient emergency");
@@ -86,12 +83,11 @@ class DomainEventsTest {
         UUID doctorId = UUID.randomUUID();
 
         ConsultationCompletedEvent event = new ConsultationCompletedEvent(
-            consultationId,
-            appointmentId,
-            patientId,
-            doctorId,
-            "Acute bronchitis"
-        );
+                consultationId,
+                appointmentId,
+                patientId,
+                doctorId,
+                "Acute bronchitis");
 
         assertThat(event.consultationId()).isEqualTo(consultationId);
         assertThat(event.appointmentId()).isEqualTo(appointmentId);

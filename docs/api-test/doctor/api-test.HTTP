@@ -7,12 +7,12 @@ POST {{baseUrl}}/api/v1/doctors
 Content-Type: application/json
 
 {
-  "licenseNumber": "MD-NY-10293",
-  "firstName": "Gregory",
-  "lastName": "House",
+  "licenseNumber": "MD-NY-10295",
+  "firstName": "Ven",
+  "lastName": "Dem",
   "specialty": "GENERAL_MEDICINE",
-  "email": "house@hospital.com",
-  "phone": "+16095551234",
+  "email": "vendem@hospital.com",
+  "phone": "+160955512345",
   "consultationFee": 250.00,
   "roomNumber": "Suite 101"
 }
@@ -39,7 +39,7 @@ Content-Type: application/json
 GET {{baseUrl}}/api/v1/doctors/{{doctorId}}
 
 ### 4. Filter Doctors by Specialty (CARDIOLOGY)
-GET {{baseUrl}}/api/v1/doctors?specialty=CARDIOLOGY
+GET {{baseUrl}}/api/v1/doctors?specialty=GENERAL_MEDICINE
 
 ### 5. Get All Doctors (Paginated & Sorted)
 GET {{baseUrl}}/api/v1/doctors?page=0&size=10
