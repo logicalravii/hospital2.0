@@ -7,12 +7,12 @@ POST {{baseUrl}}/api/v1/doctors
 Content-Type: application/json
 
 {
-  "licenseNumber": "MD-NY-10295",
-  "firstName": "Ven",
-  "lastName": "Dem",
+  "licenseNumber": "MD-NY-14532",
+  "firstName": "Chandra",
+  "lastName": "Mohan",
   "specialty": "GENERAL_MEDICINE",
-  "email": "vendem@hospital.com",
-  "phone": "+160955512345",
+  "email": "chandramohan@hospital.com",
+  "phone": "+160955512399",
   "consultationFee": 250.00,
   "roomNumber": "Suite 101"
 }
@@ -36,7 +36,12 @@ Content-Type: application/json
 ### 3. Get Doctor by ID
 # Replace {{doctorId}} with the UUID from register response
 @doctorId = fb958022-f994-4e59-899e-1e46d9efd87e
-GET {{baseUrl}}/api/v1/doctors/{{doctorId}}
+
+@doctor2 = a7a04e33-3575-422c-837f-5a5a27dbc1f7
+GET {{baseUrl}}/api/v1/doctors/{{doctor2}}
+
+### 8. Get Doctor By Name
+GET {{baseUrl}}/api/v1/doctors/name?name=Chandra
 
 ### 4. Filter Doctors by Specialty (CARDIOLOGY)
 GET {{baseUrl}}/api/v1/doctors?specialty=GENERAL_MEDICINE
@@ -45,23 +50,23 @@ GET {{baseUrl}}/api/v1/doctors?specialty=GENERAL_MEDICINE
 GET {{baseUrl}}/api/v1/doctors?page=0&size=10
 
 ### 6. Add Weekly Schedule Block for Doctor (Monday 09:00 - 12:00, 30 min slots)
-POST {{baseUrl}}/api/v1/doctors/{{doctorId}}/schedules
+POST {{baseUrl}}/api/v1/doctors/{{doctor2}}/schedules
 Content-Type: application/json
 
 {
   "dayOfWeek": "MONDAY",
   "startTime": "09:00:00",
-  "endTime": "12:00:00",
+  "endTime": "17:00:00",
   "slotDurationMinutes": 30,
   "maxPatients": 6
 }
 
 ### 7. Get All Schedules for Doctor
-GET {{baseUrl}}/api/v1/doctors/{{doctorId}}/schedules
+GET {{baseUrl}}/api/v1/doctors/{{doctor2}}/schedules
 
 ### 8. Query Available Slots for a Specific Date
 # 2026-09-21 is a Monday
-GET {{baseUrl}}/api/v1/doctors/{{doctorId}}/slots?date=2026-09-21
+GET {{baseUrl}}/api/v1/doctors/{{doctor2}}/slots?date=2026-09-21
 
 ### 9. Test Overlapping Schedule Rejection (Expects HTTP 409 Conflict)
 POST {{baseUrl}}/api/v1/doctors/{{doctorId}}/schedules

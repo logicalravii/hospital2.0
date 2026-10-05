@@ -7,12 +7,10 @@ import com.management.hospital.appointment.domain.Appointment;
 import com.management.hospital.appointment.domain.AppointmentStatus;
 import com.management.hospital.appointment.infrastructure.AppointmentEventPublisher;
 import com.management.hospital.appointment.infrastructure.AppointmentRepository;
-import com.management.hospital.appointment.infrastructure.DoctorServiceClient;
 import com.management.hospital.common.error.ConflictException;
 import com.management.hospital.common.error.ResourceNotFoundException;
 import com.management.hospital.common.event.AppointmentCancelledEvent;
 import com.management.hospital.common.event.AppointmentInitiatedEvent;
-import com.management.hospital.common.event.AppointmentScheduledEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -31,28 +29,17 @@ public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
     private final AppointmentEventPublisher eventPublisher;
-    private final DoctorServiceClient doctorServiceClient;
 
     public AppointmentService(
             AppointmentRepository appointmentRepository,
-            AppointmentEventPublisher eventPublisher,
-            DoctorServiceClient doctorServiceClient) {
+            AppointmentEventPublisher eventPublisher) {
         this.appointmentRepository = appointmentRepository;
         this.eventPublisher = eventPublisher;
-        this.doctorServiceClient = doctorServiceClient;
     }
 
     @Transactional
     public AppointmentResponse bookAppointment(BookAppointmentRequest request) {
-        // 1. Validate slot availability via doctor-service
-        doctorServiceClient.validateDoctorSlot(
-                request.doctorId(),
-                request.appointmentDate(),
-                request.startTime(),
-                request.endTime());
 
-        // 2. Enforce local invariant: no overlapping active appointments for this
-        // doctor on this date
         List<Appointment> existingAppointments = appointmentRepository.findByDoctorIdAndAppointmentDateAndStatusNot(
                 request.doctorId(),
                 request.appointmentDate(),

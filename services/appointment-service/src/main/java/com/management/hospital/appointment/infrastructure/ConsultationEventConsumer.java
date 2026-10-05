@@ -1,10 +1,7 @@
 package com.management.hospital.appointment.infrastructure;
 
-import com.management.hospital.appointment.api.dto.AppointmentResponse;
-import com.management.hospital.appointment.api.dto.CancelAppointmentRequest;
 import com.management.hospital.appointment.application.AppointmentService;
 import com.management.hospital.common.event.ConsultationCompletedEvent;
-import com.management.hospital.common.event.DoctorSlotOverlap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +18,7 @@ public class ConsultationEventConsumer {
         this.appointmentService = appointmentService;
     }
 
-    @KafkaListener(topics = ConsultationCompletedEvent.TOPIC, groupId = "appointment-service-group")
+    @KafkaListener(topics = ConsultationCompletedEvent.TOPIC)
     public void handleConsultationCompleted(ConsultationCompletedEvent event) {
         log.info("Received ConsultationCompletedEvent for consultationId: {}, appointmentId: {}",
                 event.consultationId(), event.appointmentId());

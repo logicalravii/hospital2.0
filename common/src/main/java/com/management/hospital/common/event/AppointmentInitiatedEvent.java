@@ -14,7 +14,7 @@ public record AppointmentInitiatedEvent(UUID eventId,
         LocalDate appointmentDate,
         String appointmentType,
         Instant occurredAt) implements DomainEvent {
-    public static final String TOPIC = "hospital.appointment.saga.events";
+    public static final String TOPIC = "hospital.appointment.initiated";
     public static final String EVENT_TYPE = "APPOINTMENT_INITIATED";
 
     public AppointmentInitiatedEvent(UUID appointmentId, UUID patientId, UUID doctorId, LocalTime startTime,

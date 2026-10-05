@@ -42,74 +42,68 @@ public class DoctorService {
     @Transactional
     public DoctorResponse registerDoctor(CreateDoctorRequest request) {
         if (doctorRepository.existsByLicenseNumber(request.licenseNumber().trim())) {
-            throw new ConflictException("Doctor with license number '%s' is already registered".formatted(request.licenseNumber().trim()));
+            throw new ConflictException(
+                    "Doctor with license number '%s' is already registered".formatted(request.licenseNumber().trim()));
         }
         if (doctorRepository.existsByEmail(request.email().trim().toLowerCase())) {
-            throw new ConflictException("Doctor with email '%s' is already registered".formatted(request.email().trim()));
+            throw new ConflictException(
+                    "Doctor with email '%s' is already registered".formatted(request.email().trim()));
         }
         if (doctorRepository.existsByPhone(request.phone().trim())) {
-            throw new ConflictException("Doctor with phone number '%s' is already registered".formatted(request.phone().trim()));
+            throw new ConflictException(
+                    "Doctor with phone number '%s' is already registered".formatted(request.phone().trim()));
         }
 
         Doctor doctor = new Doctor(
-            request.userId(),
-            request.licenseNumber(),
-            request.firstName(),
-            request.lastName(),
-            request.specialty(),
-            request.email().trim().toLowerCase(),
-            request.phone(),
-            request.consultationFee(),
-            request.roomNumber()
-        );
+                request.userId(),
+                request.licenseNumber(),
+                request.firstName(),
+                request.lastName(),
+                request.specialty(),
+                request.email().trim().toLowerCase(),
+                request.phone(),
+                request.consultationFee(),
+                request.roomNumber());
 
         Doctor saved = doctorRepository.save(doctor);
-        log.info("Registered doctor '{}' with ID {} and license {}", saved.getFullName(), saved.getId(), saved.getLicenseNumber());
+        log.info("Registered doctor '{}' with ID {} and license {}", saved.getFullName(), saved.getId(),
+                saved.getLicenseNumber());
         return DoctorResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
     public DoctorResponse getDoctorById(UUID id) {
         Doctor doctor = doctorRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Doctor", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", id));
         return DoctorResponse.from(doctor);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DoctorResponse> getDoctorByName(String name) {
+        List<Doctor> doctors = doctorRepository.findByFirstNameIgnoreCaseOrLastNameIgnoreCaseAndActiveTrue(name, name);
+        return doctors.stream().map(DoctorResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
     public Page<DoctorResponse> getAllDoctors(Specialty specialty, Pageable pageable) {
         Page<Doctor> page = (specialty != null)
-            ? doctorRepository.findBySpecialtyAndActiveTrue(specialty, pageable)
-            : doctorRepository.findByActiveTrue(pageable);
+                ? doctorRepository.findBySpecialtyAndActiveTrue(specialty, pageable)
+                : doctorRepository.findByActiveTrue(pageable);
         return page.map(DoctorResponse::from);
     }
 
     @Transactional
     public DoctorScheduleResponse addSchedule(UUID doctorId, CreateScheduleRequest request) {
         Doctor doctor = doctorRepository.findById(doctorId)
-            .orElseThrow(() -> new ResourceNotFoundException("Doctor", doctorId));
-
-        List<DoctorSchedule> existingSchedules = scheduleRepository.findByDoctorIdAndDayOfWeekAndActiveTrue(
-            doctorId, request.dayOfWeek()
-        );
-
-        for (DoctorSchedule existing : existingSchedules) {
-            if (existing.overlapsWith(request.dayOfWeek(), request.startTime(), request.endTime())) {
-                throw new ConflictException(
-                    "Schedule overlaps with existing active block (%s %s-%s)".formatted(
-                        existing.getDayOfWeek(), existing.getStartTime(), existing.getEndTime()
-                    )
-                );
-            }
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", doctorId));
 
         DoctorSchedule schedule = new DoctorSchedule(
-            doctor,
-            request.dayOfWeek(),
-            request.startTime(),
-            request.endTime(),
-            request.slotDurationMinutes(),
-            request.maxPatients()
-        );
+                doctor,
+                request.dayOfWeek(),
+                request.startTime(),
+                request.endTime(),
+                request.slotDurationMinutes(),
+                request.maxPatients());
 
         DoctorSchedule saved = scheduleRepository.save(schedule);
         log.info("Configured schedule {} for doctor {} on {}", saved.getId(), doctorId, saved.getDayOfWeek());
@@ -122,9 +116,9 @@ public class DoctorService {
             throw new ResourceNotFoundException("Doctor", doctorId);
         }
         return scheduleRepository.findByDoctorIdAndActiveTrue(doctorId)
-            .stream()
-            .map(DoctorScheduleResponse::from)
-            .toList();
+                .stream()
+                .map(DoctorScheduleResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -134,7 +128,8 @@ public class DoctorService {
         }
 
         DayOfWeek dayOfWeek = date.getDayOfWeek();
-        List<DoctorSchedule> schedules = scheduleRepository.findByDoctorIdAndDayOfWeekAndActiveTrue(doctorId, dayOfWeek);
+        List<DoctorSchedule> schedules = scheduleRepository.findByDoctorIdAndDayOfWeekAndActiveTrue(doctorId,
+                dayOfWeek);
 
         List<TimeSlot> allSlots = new ArrayList<>();
         for (DoctorSchedule schedule : schedules) {

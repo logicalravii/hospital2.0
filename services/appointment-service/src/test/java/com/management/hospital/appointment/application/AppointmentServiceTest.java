@@ -7,12 +7,15 @@ import com.management.hospital.appointment.domain.Appointment;
 import com.management.hospital.appointment.domain.AppointmentStatus;
 import com.management.hospital.appointment.infrastructure.AppointmentEventPublisher;
 import com.management.hospital.appointment.infrastructure.AppointmentRepository;
-import com.management.hospital.appointment.infrastructure.DoctorServiceClient;
 import com.management.hospital.common.error.ConflictException;
+import com.management.hospital.common.error.ResourceNotFoundException;
+import com.management.hospital.common.event.AppointmentCancelledEvent;
+import com.management.hospital.common.event.AppointmentInitiatedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -25,7 +28,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,18 +40,15 @@ class AppointmentServiceTest {
     @Mock
     private AppointmentEventPublisher eventPublisher;
 
-    @Mock
-    private DoctorServiceClient doctorServiceClient;
-
     private AppointmentService appointmentService;
 
     @BeforeEach
     void setUp() {
-        appointmentService = new AppointmentService(appointmentRepository, eventPublisher, doctorServiceClient);
+        appointmentService = new AppointmentService(appointmentRepository, eventPublisher);
     }
 
     @Test
-    @DisplayName("Should successfully book appointment and emit Kafka event")
+    @DisplayName("Should successfully book appointment in PENDING_VALIDATION status and emit AppointmentInitiatedEvent")
     void shouldBookAppointment() {
         UUID patientId = UUID.randomUUID();
         UUID doctorId = UUID.randomUUID();
@@ -58,11 +57,11 @@ class AppointmentServiceTest {
         LocalTime end = LocalTime.of(10, 30);
 
         BookAppointmentRequest request = new BookAppointmentRequest(
-            patientId, doctorId, date, start, end, "General consultation", "GENERAL_CONSULTATION"
+                patientId, doctorId, date, start, end, "General consultation", "GENERAL_CONSULTATION"
         );
 
         when(appointmentRepository.findByDoctorIdAndAppointmentDateAndStatusNot(doctorId, date, AppointmentStatus.CANCELLED))
-            .thenReturn(List.of());
+                .thenReturn(List.of());
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         AppointmentResponse response = appointmentService.bookAppointment(request);
@@ -71,9 +70,16 @@ class AppointmentServiceTest {
         assertThat(response.doctorId()).isEqualTo(doctorId);
         assertThat(response.status()).isEqualTo(AppointmentStatus.PENDING_VALIDATION);
 
-        verify(doctorServiceClient).validateDoctorSlot(doctorId, date, start, end);
         verify(appointmentRepository).save(any(Appointment.class));
-        verify(eventPublisher).publishAppointmentInitiated(any());
+
+        ArgumentCaptor<AppointmentInitiatedEvent> eventCaptor = ArgumentCaptor.forClass(AppointmentInitiatedEvent.class);
+        verify(eventPublisher).publishAppointmentInitiated(eventCaptor.capture());
+        AppointmentInitiatedEvent publishedEvent = eventCaptor.getValue();
+        assertThat(publishedEvent.patientId()).isEqualTo(patientId);
+        assertThat(publishedEvent.doctorId()).isEqualTo(doctorId);
+        assertThat(publishedEvent.appointmentDate()).isEqualTo(date);
+        assertThat(publishedEvent.startTime()).isEqualTo(start);
+        assertThat(publishedEvent.endTime()).isEqualTo(end);
     }
 
     @Test
@@ -85,18 +91,20 @@ class AppointmentServiceTest {
         LocalTime start = LocalTime.of(10, 0);
         LocalTime end = LocalTime.of(11, 0);
 
-        Appointment existing = new Appointment(UUID.randomUUID(), doctorId, date, LocalTime.of(9, 30), LocalTime.of(10, 30), "Existing");
+        Appointment existing = new Appointment(
+                UUID.randomUUID(), doctorId, date, LocalTime.of(9, 30), LocalTime.of(10, 30), "Existing"
+        );
 
         when(appointmentRepository.findByDoctorIdAndAppointmentDateAndStatusNot(doctorId, date, AppointmentStatus.CANCELLED))
-            .thenReturn(List.of(existing));
+                .thenReturn(List.of(existing));
 
         BookAppointmentRequest request = new BookAppointmentRequest(
-            patientId, doctorId, date, start, end, "Conflict test", null
+                patientId, doctorId, date, start, end, "Conflict test", null
         );
 
         assertThatThrownBy(() -> appointmentService.bookAppointment(request))
-            .isInstanceOf(ConflictException.class)
-            .hasMessageContaining("Doctor already has an active appointment");
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("Doctor already has an active appointment");
     }
 
     @Test
@@ -104,8 +112,8 @@ class AppointmentServiceTest {
     void shouldCancelAppointment() {
         UUID appointmentId = UUID.randomUUID();
         Appointment appointment = new Appointment(
-            UUID.randomUUID(), UUID.randomUUID(), LocalDate.now().plusDays(1),
-            LocalTime.of(9, 0), LocalTime.of(9, 30), "Consultation"
+                UUID.randomUUID(), UUID.randomUUID(), LocalDate.now().plusDays(1),
+                LocalTime.of(9, 0), LocalTime.of(9, 30), "Consultation"
         );
 
         when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(appointment));
@@ -117,7 +125,9 @@ class AppointmentServiceTest {
         assertThat(response.status()).isEqualTo(AppointmentStatus.CANCELLED);
         assertThat(response.cancellationReason()).isEqualTo("Patient cannot attend");
 
-        verify(eventPublisher).publishAppointmentCancelled(any());
+        ArgumentCaptor<AppointmentCancelledEvent> eventCaptor = ArgumentCaptor.forClass(AppointmentCancelledEvent.class);
+        verify(eventPublisher).publishAppointmentCancelled(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().reason()).isEqualTo("Patient cannot attend");
     }
 
     @Test
@@ -125,8 +135,8 @@ class AppointmentServiceTest {
     void shouldConfirmAppointment() {
         UUID appointmentId = UUID.randomUUID();
         Appointment appointment = new Appointment(
-            UUID.randomUUID(), UUID.randomUUID(), LocalDate.now().plusDays(1),
-            LocalTime.of(9, 0), LocalTime.of(9, 30), "Consultation"
+                UUID.randomUUID(), UUID.randomUUID(), LocalDate.now().plusDays(1),
+                LocalTime.of(9, 0), LocalTime.of(9, 30), "Consultation", AppointmentStatus.PENDING_VALIDATION
         );
 
         when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(appointment));
@@ -134,5 +144,52 @@ class AppointmentServiceTest {
 
         AppointmentResponse response = appointmentService.confirmAppointment(appointmentId);
         assertThat(response.status()).isEqualTo(AppointmentStatus.CONFIRMED);
+        verify(appointmentRepository).save(appointment);
+    }
+
+    @Test
+    @DisplayName("Should start appointment successfully")
+    void shouldStartAppointment() {
+        UUID appointmentId = UUID.randomUUID();
+        Appointment appointment = new Appointment(
+                UUID.randomUUID(), UUID.randomUUID(), LocalDate.now().plusDays(1),
+                LocalTime.of(9, 0), LocalTime.of(9, 30), "Consultation", AppointmentStatus.SCHEDULED
+        );
+        appointment.confirm();
+
+        when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppointmentResponse response = appointmentService.startAppointment(appointmentId);
+        assertThat(response.status()).isEqualTo(AppointmentStatus.IN_PROGRESS);
+    }
+
+    @Test
+    @DisplayName("Should complete appointment successfully")
+    void shouldCompleteAppointment() {
+        UUID appointmentId = UUID.randomUUID();
+        Appointment appointment = new Appointment(
+                UUID.randomUUID(), UUID.randomUUID(), LocalDate.now().plusDays(1),
+                LocalTime.of(9, 0), LocalTime.of(9, 30), "Consultation", AppointmentStatus.SCHEDULED
+        );
+        appointment.confirm();
+        appointment.start();
+
+        when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppointmentResponse response = appointmentService.completeAppointment(appointmentId);
+        assertThat(response.status()).isEqualTo(AppointmentStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("Should throw ResourceNotFoundException when appointment does not exist")
+    void shouldThrowNotFoundWhenAppointmentNotFound() {
+        UUID appointmentId = UUID.randomUUID();
+        when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> appointmentService.getAppointmentById(appointmentId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Appointment");
     }
 }

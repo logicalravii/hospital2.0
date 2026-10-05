@@ -20,7 +20,7 @@ public class AppointmentSagaGroup {
         this.appointmentService = appointmentService;
     }
 
-    @KafkaListener(topics = DoctorSlotOverlap.TOPIC, groupId = "appointment-service-group")
+    @KafkaListener(topics = DoctorSlotOverlap.TOPIC)
     public void handleDoctorSlotOverlap(DoctorSlotOverlap event) {
         log.info("Received DoctorSlotOverlap for appointmentId: {}, doctorId: {}",
                 event.appointmentId(), event.doctorId());
@@ -37,7 +37,7 @@ public class AppointmentSagaGroup {
         }
     }
 
-    @KafkaListener(topics = DoctorSlotAvailableEvent.TOPIC, groupId = "appointment-service-group")
+    @KafkaListener(topics = DoctorSlotAvailableEvent.TOPIC)
     public void handleDoctorSlotAvailable(DoctorSlotAvailableEvent event) {
         log.info("Received DoctorSlotAvailable for appointmentId: {}, doctorId: {}",
                 event.appointmentId(), event.doctorId());

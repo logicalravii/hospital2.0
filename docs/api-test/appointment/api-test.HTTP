@@ -1,6 +1,7 @@
 ### Variables
 @baseUrl = http://localhost:8084
 @doctorId = fb958022-f994-4e59-899e-1e46d9efd87e
+@doctor2 = a7a04e33-3575-422c-837f-5a5a27dbc1f7
 
 @patientId = c0436a7c-67a8-451e-b733-fc3082c43262
 
@@ -11,16 +12,16 @@ Content-Type: application/json
 
 {
   "patientId": "{{patientId}}",
-  "doctorId": "{{doctorId}}",
-  "appointmentDate": "2026-10-21",
-  "startTime": "12:30:00",
-  "endTime": "10:00:00",
+  "doctorId": "{{doctor2}}",
+  "appointmentDate": "2026-12-30",
+  "startTime": "12:00:00",
+  "endTime": "12:00:00",
   "reason": "Follow-up consultation for persistent headaches"
 }
 
 ### 2. Confirm an Appointment
 # Replace {{appointmentId}} with the UUID from booking response
-@appointmentId = 6cf8c365-4e81-4cbe-8d1c-ec39680bf65a
+@appointmentId = 6a86967f-cf04-4ed4-a8e1-a1c20e5b925e
 POST {{baseUrl}}/api/v1/appointments/{{appointmentId}}/confirm
 
 ### 3. Start an Appointment (Doctor consultation begins)
@@ -38,7 +39,7 @@ Content-Type: application/json
 GET {{baseUrl}}/api/v1/appointments/{{appointmentId}}
 
 ### 6. Query Appointments by Doctor & Date
-GET {{baseUrl}}/api/v1/appointments?doctorId={{doctorId}}&date=2026-09-21
+GET {{baseUrl}}/api/v1/appointments?doctorId={{doctor2}}&date=2026-11-24
 
 ### 7. Query Appointments by Patient
 GET {{baseUrl}}/api/v1/appointments?patientId={{patientId}}

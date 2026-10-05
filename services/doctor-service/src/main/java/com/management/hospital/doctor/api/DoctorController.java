@@ -48,24 +48,27 @@ public class DoctorController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/name")
+    public ResponseEntity<List<DoctorResponse>> getDoctorByName(@RequestParam(required = false) String name) {
+        List<DoctorResponse> response = doctorService.getDoctorByName(name);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
     public ResponseEntity<Page<DoctorResponse>> getAllDoctors(
-        @RequestParam(required = false) Specialty specialty,
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "20") int size
-    ) {
+            @RequestParam(required = false) Specialty specialty,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         Page<DoctorResponse> response = doctorService.getAllDoctors(
-            specialty,
-            PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "lastName"))
-        );
+                specialty,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "lastName")));
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/schedules")
     public ResponseEntity<DoctorScheduleResponse> addSchedule(
-        @PathVariable UUID id,
-        @Valid @RequestBody CreateScheduleRequest request
-    ) {
+            @PathVariable UUID id,
+            @Valid @RequestBody CreateScheduleRequest request) {
         DoctorScheduleResponse response = doctorService.addSchedule(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -78,9 +81,8 @@ public class DoctorController {
 
     @GetMapping("/{id}/slots")
     public ResponseEntity<AvailableSlotsResponse> getAvailableSlots(
-        @PathVariable UUID id,
-        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
-    ) {
+            @PathVariable UUID id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         AvailableSlotsResponse response = doctorService.getAvailableSlotsForDate(id, date);
         return ResponseEntity.ok(response);
     }

@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public record DoctorSlotAvailableEvent(UUID eventId, UUID appointmentId, UUID doctorId, Instant occurredAt)
         implements DomainEvent {
-    public static final String TOPIC = "hospital.doctor.events";
+    public static final String TOPIC = "hospital.doctor.available";
     public static final String EVENT_TYPE = "DOCTOR_SLOT_AVAILABLE";
 
     public DoctorSlotAvailableEvent(UUID appointmentId, UUID doctorId) {
