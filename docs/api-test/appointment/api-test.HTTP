@@ -13,15 +13,15 @@ Content-Type: application/json
 {
   "patientId": "{{patientId}}",
   "doctorId": "{{doctor2}}",
-  "appointmentDate": "2026-12-30",
-  "startTime": "12:00:00",
+  "appointmentDate": "2027-01-01",
+  "startTime": "11:30:00",
   "endTime": "12:00:00",
   "reason": "Follow-up consultation for persistent headaches"
 }
 
 ### 2. Confirm an Appointment
 # Replace {{appointmentId}} with the UUID from booking response
-@appointmentId = 6a86967f-cf04-4ed4-a8e1-a1c20e5b925e
+@appointmentId = d3209e8d-be2d-4d23-b19d-b6baa4611019
 POST {{baseUrl}}/api/v1/appointments/{{appointmentId}}/confirm
 
 ### 3. Start an Appointment (Doctor consultation begins)

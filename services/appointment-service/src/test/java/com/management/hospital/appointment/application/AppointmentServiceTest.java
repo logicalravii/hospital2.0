@@ -11,6 +11,7 @@ import com.management.hospital.common.error.ConflictException;
 import com.management.hospital.common.error.ResourceNotFoundException;
 import com.management.hospital.common.event.AppointmentCancelledEvent;
 import com.management.hospital.common.event.AppointmentInitiatedEvent;
+import com.management.hospital.appointment.infrastructure.outbox.OutboxService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,15 +42,18 @@ class AppointmentServiceTest {
     @Mock
     private AppointmentEventPublisher eventPublisher;
 
+    @Mock
+    private OutboxService outboxService;
+
     private AppointmentService appointmentService;
 
     @BeforeEach
     void setUp() {
-        appointmentService = new AppointmentService(appointmentRepository, eventPublisher);
+        appointmentService = new AppointmentService(appointmentRepository, eventPublisher, outboxService);
     }
 
     @Test
-    @DisplayName("Should successfully book appointment in PENDING_VALIDATION status and emit AppointmentInitiatedEvent")
+    @DisplayName("Should successfully book appointment in PENDING_VALIDATION status and save event to Transactional Outbox")
     void shouldBookAppointment() {
         UUID patientId = UUID.randomUUID();
         UUID doctorId = UUID.randomUUID();
@@ -73,7 +78,13 @@ class AppointmentServiceTest {
         verify(appointmentRepository).save(any(Appointment.class));
 
         ArgumentCaptor<AppointmentInitiatedEvent> eventCaptor = ArgumentCaptor.forClass(AppointmentInitiatedEvent.class);
-        verify(eventPublisher).publishAppointmentInitiated(eventCaptor.capture());
+        verify(outboxService).saveEvent(
+                eq("Appointment"),
+                any(UUID.class),
+                eq("APPOINTMENT_INITIATED"),
+                eq(AppointmentInitiatedEvent.TOPIC),
+                eventCaptor.capture()
+        );
         AppointmentInitiatedEvent publishedEvent = eventCaptor.getValue();
         assertThat(publishedEvent.patientId()).isEqualTo(patientId);
         assertThat(publishedEvent.doctorId()).isEqualTo(doctorId);

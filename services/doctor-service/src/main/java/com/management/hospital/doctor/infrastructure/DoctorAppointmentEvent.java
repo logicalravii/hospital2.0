@@ -1,11 +1,5 @@
 package com.management.hospital.doctor.infrastructure;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -15,7 +9,6 @@ import com.management.hospital.common.event.AppointmentInitiatedEvent;
 import com.management.hospital.common.event.DoctorSlotAvailableEvent;
 import com.management.hospital.common.event.DoctorSlotOverlap;
 import com.management.hospital.doctor.api.dto.AvailableSlotsResponse;
-import com.management.hospital.doctor.api.dto.CreateScheduleRequest;
 import com.management.hospital.doctor.application.DoctorService;
 
 @Component
@@ -51,21 +44,16 @@ public class DoctorAppointmentEvent {
                                 : "No slot found for appointmentId: {}, doctorId: {}";
                 log.info(message, event.appointmentId(), event.doctorId());
 
-                if (!slotAvailable) {
-                        log.info("Appointment {} is overlapping with existing appointment", event.appointmentId());
+                if (!slotAvailable || !isDoctorScheduleAvailable) {
+                        log.info("Appointment {} is overlapping or slot unavailable for doctor {}", event.appointmentId(), event.doctorId());
                         doctorEventPublisher
                                         .publishAppointmentOverlaps(
                                                         new DoctorSlotOverlap(event.appointmentId(), event.doctorId()));
                 } else {
-                        log.info("Appointment {} is not overlapping with existing appointment", event.appointmentId());
-                        int duration = (int) java.time.Duration.between(event.startTime(), event.endTime()).toMinutes();
-                        doctorService.addSchedule(event.doctorId(), new CreateScheduleRequest(
-                                        event.appointmentDate().getDayOfWeek(), event.startTime(), event.endTime(),
-                                        duration, 1));
+                        log.info("Appointment {} slot is available for doctor {}", event.appointmentId(), event.doctorId());
                         doctorEventPublisher
                                         .publishDoctorSlotAvailable(new DoctorSlotAvailableEvent(event.appointmentId(),
                                                         event.doctorId()));
                 }
-
         }
 }

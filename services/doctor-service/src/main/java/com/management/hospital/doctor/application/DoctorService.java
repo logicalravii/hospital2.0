@@ -97,6 +97,17 @@ public class DoctorService {
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor", doctorId));
 
+        List<DoctorSchedule> existingSchedules = scheduleRepository.findByDoctorIdAndDayOfWeekAndActiveTrue(
+                doctorId, request.dayOfWeek());
+
+        for (DoctorSchedule existing : existingSchedules) {
+            if (existing.overlapsWith(request.dayOfWeek(), request.startTime(), request.endTime())) {
+                throw new ConflictException(
+                        "Schedule overlaps with existing active block (%s %s-%s)".formatted(
+                                existing.getDayOfWeek(), existing.getStartTime(), existing.getEndTime()));
+            }
+        }
+
         DoctorSchedule schedule = new DoctorSchedule(
                 doctor,
                 request.dayOfWeek(),

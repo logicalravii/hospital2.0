@@ -29,12 +29,15 @@ public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
     private final AppointmentEventPublisher eventPublisher;
+    private final com.management.hospital.appointment.infrastructure.outbox.OutboxService outboxService;
 
     public AppointmentService(
             AppointmentRepository appointmentRepository,
-            AppointmentEventPublisher eventPublisher) {
+            AppointmentEventPublisher eventPublisher,
+            com.management.hospital.appointment.infrastructure.outbox.OutboxService outboxService) {
         this.appointmentRepository = appointmentRepository;
         this.eventPublisher = eventPublisher;
+        this.outboxService = outboxService;
     }
 
     @Transactional
@@ -66,18 +69,10 @@ public class AppointmentService {
         log.info("Started Booking appointment {} for patient {} and doctor {} on {}",
                 saved.getId(), saved.getPatientId(), saved.getDoctorId(), saved.getAppointmentDate());
 
-        // 4. Publish Kafka Domain Event
+        // 4. Save to Transactional Outbox (atomically committed with appointment)
         String apptType = (request.appointmentType() != null && !request.appointmentType().isBlank())
                 ? request.appointmentType().trim()
                 : "GENERAL_CONSULTATION";
-
-        // AppointmentScheduledEvent event = new AppointmentScheduledEvent(
-        // saved.getId(),
-        // saved.getPatientId(),
-        // saved.getDoctorId(),
-        // saved.getStartInstant(),
-        // saved.getEndInstant(),
-        // apptType);
 
         AppointmentInitiatedEvent event = new AppointmentInitiatedEvent(saved.getId(),
                 saved.getPatientId(),
@@ -87,7 +82,12 @@ public class AppointmentService {
                 request.appointmentDate(),
                 apptType);
 
-        eventPublisher.publishAppointmentInitiated(event);
+        outboxService.saveEvent(
+                "Appointment",
+                saved.getId(),
+                event.eventType(),
+                AppointmentInitiatedEvent.TOPIC,
+                event);
 
         return AppointmentResponse.from(saved);
     }
