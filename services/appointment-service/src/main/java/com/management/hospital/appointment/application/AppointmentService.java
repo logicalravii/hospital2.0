@@ -11,6 +11,7 @@ import com.management.hospital.common.error.ConflictException;
 import com.management.hospital.common.error.ResourceNotFoundException;
 import com.management.hospital.common.event.AppointmentCancelledEvent;
 import com.management.hospital.common.event.AppointmentInitiatedEvent;
+import com.management.hospital.common.event.AppointmentScheduledEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -100,6 +102,17 @@ public class AppointmentService {
         appointment.confirm();
         Appointment saved = appointmentRepository.save(appointment);
         log.info("Confirmed appointment {}", saved.getId());
+
+        AppointmentScheduledEvent event = new AppointmentScheduledEvent(
+                saved.getId(),
+                saved.getPatientId(),
+                saved.getDoctorId(),
+                Instant.now(),
+                Instant.now(),
+                saved.getReason() != null ? saved.getReason() : "GENERAL"
+        );
+        eventPublisher.publishAppointmentScheduled(event);
+
         return AppointmentResponse.from(saved);
     }
 

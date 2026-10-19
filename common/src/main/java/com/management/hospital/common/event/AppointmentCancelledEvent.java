@@ -14,10 +14,10 @@ public record AppointmentCancelledEvent(
     public static final String EVENT_TYPE = "APPOINTMENT_CANCELLED";
 
     public AppointmentCancelledEvent(UUID appointmentId, UUID patientId, UUID doctorId, String reason) {
+
         this(UUID.randomUUID(), appointmentId, patientId, doctorId, reason, Instant.now());
     }
 
-    @Override
     public String eventType() {
         return EVENT_TYPE;
     }

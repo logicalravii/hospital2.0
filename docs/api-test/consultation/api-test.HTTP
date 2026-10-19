@@ -1,0 +1,100 @@
+### Variables
+@baseUrl = http://localhost:8085
+@appointmentId = d3209e8d-be2d-4d23-b19d-b6baa4611019
+@patientId = c0436a7c-67a8-451e-b733-fc3082c43262
+@doctorId = a7a04e33-3575-422c-837f-5a5a27dbc1f7
+
+### 1. Record a Clinical Consultation with Vitals (JSONB)
+# @name recordConsultation
+POST {{baseUrl}}/api/v1/consultations
+Content-Type: application/json
+
+{
+  "appointmentId": "{{appointmentId}}",
+  "patientId": "{{patientId}}",
+  "doctorId": "{{doctorId}}",
+  "chiefComplaint": "Patient presents with persistent severe frontal headaches and photo-sensitivity",
+  "diagnosis": "Acute migraine without aura (ICD-10 G43.0)",
+  "clinicalNotes": "Patient instructed to maintain headache diary. Prescribed Sumatriptan 50mg PRN. Follow-up in 2 weeks if symptoms persist.",
+  "vitals": {
+    "temperatureCelsius": 36.8,
+    "systolicBp": 122,
+    "diastolicBp": 78,
+    "pulseRateBpm": 72,
+    "respiratoryRate": 16,
+    "oxygenSaturationPct": 99.0
+  }
+}
+
+### 2. Get Consultation by ID
+# Replace with UUID returned from POST
+@consultationId = 34971bff-1877-43fd-94c4-5804e00e20d9
+GET {{baseUrl}}/api/v1/consultations/{{consultationId}}
+
+### 3. Get Consultation by Appointment ID
+GET {{baseUrl}}/api/v1/consultations/appointment/{{appointmentId}}
+
+### 4. Get Consultations by Patient ID (Paginated history)
+GET {{baseUrl}}/api/v1/consultations?patientId={{patientId}}&page=0&size=10
+
+### 5. Attempt Duplicate Consultation for Same Appointment (Should return 409 Conflict)
+POST {{baseUrl}}/api/v1/consultations
+Content-Type: application/json
+
+{
+  "appointmentId": "{{appointmentId}}",
+  "patientId": "{{patientId}}",
+  "doctorId": "{{doctorId}}",
+  "chiefComplaint": "Duplicate attempt",
+  "diagnosis": "Should fail with conflict",
+  "clinicalNotes": "Testing duplicate prevention",
+  "vitals": null
+}
+
+### 6. Validation Failure Example (Should return 400 Bad Request with fieldErrors)
+POST {{baseUrl}}/api/v1/consultations
+Content-Type: application/json
+
+{
+  "appointmentId": null,
+  "patientId": null,
+  "doctorId": null,
+  "chiefComplaint": "",
+  "diagnosis": ""
+}
+
+### 7. Non-existent Appointment Verification (Should return 404 Not Found from appointment-service check)
+POST {{baseUrl}}/api/v1/consultations
+Content-Type: application/json
+
+{
+  "appointmentId": "00000000-0000-0000-0000-000000000000",
+  "patientId": "{{patientId}}",
+  "doctorId": "{{doctorId}}",
+  "chiefComplaint": "Fever and chills",
+  "diagnosis": "Viral fever"
+}
+
+### 8. Mismatched Patient ID Verification (Should return 409 Conflict)
+POST {{baseUrl}}/api/v1/consultations
+Content-Type: application/json
+
+{
+  "appointmentId": "{{appointmentId}}",
+  "patientId": "11111111-1111-1111-1111-111111111111",
+  "doctorId": "{{doctorId}}",
+  "chiefComplaint": "Patient ID mismatch test",
+  "diagnosis": "Testing patient mismatch"
+}
+
+### 9. Mismatched Doctor ID Verification (Should return 409 Conflict)
+POST {{baseUrl}}/api/v1/consultations
+Content-Type: application/json
+
+{
+  "appointmentId": "{{appointmentId}}",
+  "patientId": "{{patientId}}",
+  "doctorId": "22222222-2222-2222-2222-222222222222",
+  "chiefComplaint": "Doctor ID mismatch test",
+  "diagnosis": "Testing doctor mismatch"
+}

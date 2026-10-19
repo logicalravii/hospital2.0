@@ -156,6 +156,7 @@ class AppointmentServiceTest {
         AppointmentResponse response = appointmentService.confirmAppointment(appointmentId);
         assertThat(response.status()).isEqualTo(AppointmentStatus.CONFIRMED);
         verify(appointmentRepository).save(appointment);
+        verify(eventPublisher).publishAppointmentScheduled(any());
     }
 
     @Test

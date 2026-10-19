@@ -15,8 +15,8 @@ This document tracks the step-by-step implementation of the Hospital Management 
 | **4** | Identity Service (`identity-service` :8081) | `COMPLETED` | User accounts, JWT auth, Flyway `V1`, 14 tests pass, live verified |
 | **5** | Patient Service (`patient-service` :8082) | `COMPLETED` | Registration, MRN, Flyway `V1`, 13 tests pass, Kafka event verified |
 | **6** | Doctor Service (`doctor-service` :8083) | `COMPLETED` | Profiles, Schedules, Flyway `V1`, 19 tests pass, slot queries verified |
-| **7** | Appointment Service (`appointment-service` :8084) | `NOT STARTED` | Booking FSM, Kafka Producer & Consumer |
-| **8** | Consultation Service (`consultation-service` :8085) | `NOT STARTED` | Clinical encounters, Vitals JSONB, Kafka |
+| **7** | Appointment Service (`appointment-service` :8084) | `COMPLETED` | Booking FSM, Outbox Pattern, Kafka & REST verified, 22 tests pass |
+| **8** | Consultation Service (`consultation-service` :8085) | `COMPLETED` | Clinical encounters, Vitals JSONB, Kafka event, 31 tests pass |
 | **9** | API Gateway (`api-gateway` :8080) | `NOT STARTED` | Spring Cloud Gateway routing & header forward |
 | **10** | End-to-End Verification & Verification Suite | `NOT STARTED` | Full flow smoke testing across gateway |
 
@@ -137,13 +137,21 @@ This document tracks the step-by-step implementation of the Hospital Management 
 ---
 
 ### Step 8: Consultation Service (`services/consultation-service` — Port 8085)
-- [ ] Create `services/consultation-service/pom.xml` and application bootstrap class.
-- [ ] Add Flyway migration `V1__init_consultation.sql` (`consultation` table with `vitals JSONB`).
-- [ ] Implement Domain layer: `Consultation` aggregate, `Vitals` value object with physiological boundary validation.
-- [ ] Configure Kafka Producer for `hospital.consultation.events` (`ConsultationCompletedEvent`).
-- [ ] Implement REST API: `POST /api/v1/consultations` and `GET /api/v1/consultations/{id}`.
-- [ ] Add tests for vitals JSONB serialization and clinical domain invariants.
-- [ ] **Verification**: Record a consultation, verify vitals JSONB storage and Kafka event publication.
+- [x] Create `services/consultation-service/pom.xml` and application bootstrap class.
+- [x] Add Flyway migration `V1__init_consultation.sql` (`consultation` table with `vitals JSONB`).
+- [x] Implement Domain layer: `Consultation` aggregate, `Vitals` value object with physiological boundary validation.
+- [x] Configure Kafka Producer for `hospital.consultation.events` (`ConsultationCompletedEvent`).
+- [x] Implement REST API:
+  - `POST /api/v1/consultations` (record clinical encounter, emit `ConsultationCompletedEvent`, returns 201).
+  - `GET /api/v1/consultations/{id}` (retrieve consultation by ID, returns 200).
+  - `GET /api/v1/consultations/appointment/{appointmentId}` (retrieve consultation by appointment, returns 200).
+  - `GET /api/v1/consultations?patientId=...` (list patient consultation history with pagination, returns 200).
+- [x] Add 31 automated tests across domain rules, physiological vitals boundaries, service coordination, and REST slice tests.
+- [x] **Verification**:
+  - Flyway migration script created for `consultation_db`.
+  - Vitals JSONB boundary invariants and duplicate appointment conflict handling tested.
+  - Kafka event emission configured on `hospital.consultation.events`.
+  - HTTP test requests saved in [docs/api-test/consultation/api-test.HTTP](file:///Users/ravikumar/Test_Application/hospital/docs/api-test/consultation/api-test.HTTP).
 
 ---
 

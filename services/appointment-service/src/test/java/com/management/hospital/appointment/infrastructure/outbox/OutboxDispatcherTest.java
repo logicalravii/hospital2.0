@@ -66,7 +66,8 @@ class OutboxDispatcherTest {
                 jsonPayload
         );
 
-        when(outboxEventRepository.findById(outboxEvent.getId())).thenReturn(Optional.of(outboxEvent));
+        when(outboxEventRepository.findByIdAndStatus(outboxEvent.getId(), OutboxStatus.PENDING))
+                .thenReturn(Optional.of(outboxEvent));
         when(kafkaTemplate.send(eq(AppointmentInitiatedEvent.TOPIC), eq(appointmentId.toString()), any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
         when(outboxEventRepository.save(any(OutboxEvent.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -104,7 +105,8 @@ class OutboxDispatcherTest {
 
         when(outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING))
                 .thenReturn(List.of(outboxEvent));
-        when(outboxEventRepository.findById(outboxEvent.getId())).thenReturn(Optional.of(outboxEvent));
+        when(outboxEventRepository.findByIdAndStatus(outboxEvent.getId(), OutboxStatus.PENDING))
+                .thenReturn(Optional.of(outboxEvent));
         when(kafkaTemplate.send(eq(AppointmentInitiatedEvent.TOPIC), eq(appointmentId.toString()), any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
         when(outboxEventRepository.save(any(OutboxEvent.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -139,7 +141,8 @@ class OutboxDispatcherTest {
                 jsonPayload
         );
 
-        when(outboxEventRepository.findById(outboxEvent.getId())).thenReturn(Optional.of(outboxEvent));
+        when(outboxEventRepository.findByIdAndStatus(outboxEvent.getId(), OutboxStatus.PENDING))
+                .thenReturn(Optional.of(outboxEvent));
         when(kafkaTemplate.send(eq(AppointmentInitiatedEvent.TOPIC), eq(appointmentId.toString()), any()))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("Kafka timeout")));
         when(outboxEventRepository.save(any(OutboxEvent.class))).thenAnswer(invocation -> invocation.getArgument(0));
