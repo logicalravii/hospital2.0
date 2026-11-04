@@ -24,6 +24,7 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<jjwt.version>0.12.6</jjwt.version>
 		<testcontainers.version>1.20.4</testcontainers.version>
+		<spring-cloud.version>2024.0.0</spring-cloud.version>
 	</properties>
 
 	<modules>
@@ -33,13 +34,19 @@
 		<module>services/doctor-service</module>
 		<module>services/appointment-service</module>
 		<module>services/consultation-service</module>
-		<!-- Microservice modules will be activated sequentially as implemented:
 		<module>services/api-gateway</module>
-		-->
 	</modules>
 
 	<dependencyManagement>
 		<dependencies>
+			<!-- Spring Cloud Release Train -->
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 			<!-- Internal Shared Common Library -->
 			<dependency>
 				<groupId>com.management.hospital</groupId>

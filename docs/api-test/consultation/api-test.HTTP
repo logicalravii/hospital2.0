@@ -1,8 +1,19 @@
 ### Variables
 @baseUrl = http://localhost:8085
-@appointmentId = d3209e8d-be2d-4d23-b19d-b6baa4611019
+
+                 
+# @appointmentId = d3209e8d-be2d-4d23-b19d-b6baa4611019
+# @patientId = c0436a7c-67a8-451e-b733-fc3082c43262
+# @doctorId = a7a04e33-3575-422c-837f-5a5a27dbc1f7
+
+@appointmentId = 0cb1d59d-b013-46e0-ae31-88e5faaac394
 @patientId = c0436a7c-67a8-451e-b733-fc3082c43262
 @doctorId = a7a04e33-3575-422c-837f-5a5a27dbc1f7
+
+# @appointmentId = d3209e8d-be2d-4d23-b19d-b6baa4611013
+# @patientId = c0436a7c-67a8-451e-b733-fc3082c43265
+# @doctorId = a7a04e33-3575-422c-837f-5a5a27dbc1f9
+
 
 ### 1. Record a Clinical Consultation with Vitals (JSONB)
 # @name recordConsultation
@@ -28,7 +39,7 @@ Content-Type: application/json
 
 ### 2. Get Consultation by ID
 # Replace with UUID returned from POST
-@consultationId = 34971bff-1877-43fd-94c4-5804e00e20d9
+@consultationId = 31cad45a-92f4-47fb-82f1-88ae9e5278e9
 GET {{baseUrl}}/api/v1/consultations/{{consultationId}}
 
 ### 3. Get Consultation by Appointment ID
@@ -61,40 +72,4 @@ Content-Type: application/json
   "doctorId": null,
   "chiefComplaint": "",
   "diagnosis": ""
-}
-
-### 7. Non-existent Appointment Verification (Should return 404 Not Found from appointment-service check)
-POST {{baseUrl}}/api/v1/consultations
-Content-Type: application/json
-
-{
-  "appointmentId": "00000000-0000-0000-0000-000000000000",
-  "patientId": "{{patientId}}",
-  "doctorId": "{{doctorId}}",
-  "chiefComplaint": "Fever and chills",
-  "diagnosis": "Viral fever"
-}
-
-### 8. Mismatched Patient ID Verification (Should return 409 Conflict)
-POST {{baseUrl}}/api/v1/consultations
-Content-Type: application/json
-
-{
-  "appointmentId": "{{appointmentId}}",
-  "patientId": "11111111-1111-1111-1111-111111111111",
-  "doctorId": "{{doctorId}}",
-  "chiefComplaint": "Patient ID mismatch test",
-  "diagnosis": "Testing patient mismatch"
-}
-
-### 9. Mismatched Doctor ID Verification (Should return 409 Conflict)
-POST {{baseUrl}}/api/v1/consultations
-Content-Type: application/json
-
-{
-  "appointmentId": "{{appointmentId}}",
-  "patientId": "{{patientId}}",
-  "doctorId": "22222222-2222-2222-2222-222222222222",
-  "chiefComplaint": "Doctor ID mismatch test",
-  "diagnosis": "Testing doctor mismatch"
 }

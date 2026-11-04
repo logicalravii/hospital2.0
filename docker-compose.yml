@@ -53,6 +53,142 @@ services:
     networks:
       - hms-network
 
+  identity-service:
+    build:
+      context: .
+      dockerfile: services/identity-service/Dockerfile
+    container_name: hms-identity-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/identity_db
+      SPRING_DATASOURCE_USERNAME: hms_user
+      SPRING_DATASOURCE_PASSWORD: hms_password
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      JWT_EXPIRATION_MS: 86400000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hms-network
+
+  patient-service:
+    build:
+      context: .
+      dockerfile: services/patient-service/Dockerfile
+    container_name: hms-patient-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/patient_db
+      SPRING_DATASOURCE_USERNAME: hms_user
+      SPRING_DATASOURCE_PASSWORD: hms_password
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - hms-network
+
+  doctor-service:
+    build:
+      context: .
+      dockerfile: services/doctor-service/Dockerfile
+    container_name: hms-doctor-service
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/doctor_db
+      SPRING_DATASOURCE_USERNAME: hms_user
+      SPRING_DATASOURCE_PASSWORD: hms_password
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - hms-network
+
+  appointment-service:
+    build:
+      context: .
+      dockerfile: services/appointment-service/Dockerfile
+    container_name: hms-appointment-service
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/appointment_db
+      SPRING_DATASOURCE_USERNAME: hms_user
+      SPRING_DATASOURCE_PASSWORD: hms_password
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      DOCTOR_SERVICE_URL: http://doctor-service:8083
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      doctor-service:
+        condition: service_started
+    networks:
+      - hms-network
+
+  consultation-service:
+    build:
+      context: .
+      dockerfile: services/consultation-service/Dockerfile
+    container_name: hms-consultation-service
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/consultation_db
+      SPRING_DATASOURCE_USERNAME: hms_user
+      SPRING_DATASOURCE_PASSWORD: hms_password
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - hms-network
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: hms-api-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      SERVICES_IDENTITY_URL: http://identity-service:8081
+      SERVICES_PATIENT_URL: http://patient-service:8082
+      SERVICES_DOCTOR_URL: http://doctor-service:8083
+      SERVICES_APPOINTMENT_URL: http://appointment-service:8084
+      SERVICES_CONSULTATION_URL: http://consultation-service:8085
+    depends_on:
+      identity-service:
+        condition: service_started
+      patient-service:
+        condition: service_started
+      doctor-service:
+        condition: service_started
+      appointment-service:
+        condition: service_started
+      consultation-service:
+        condition: service_started
+    networks:
+      - hms-network
+
 networks:
   hms-network:
     driver: bridge

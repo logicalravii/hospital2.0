@@ -1,0 +1,70 @@
+### API Gateway Requests Collection (Port 8080)
+# Gateway routes incoming traffic through port 8080, terminates and validates JWT, 
+# and transparently populates downstream security headers: X-User-Id, X-User-Roles, X-User-Name.
+
+### Variables
+@gatewayUrl = http://localhost:8080
+@authToken = eyJhbGciOiJIUzI1NiJ9...
+
+### 1. Authenticate via Gateway (Public Route -> Identity Service :8081)
+# @name login
+POST {{gatewayUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "dr.smith",
+  "password": "Password123!"
+}
+
+### 2. Verify Rejection Without Token (Protected Route -> 401 UNAUTHORIZED)
+GET {{gatewayUrl}}/api/v1/patients
+Accept: application/json
+
+### 3. Verify Rejection With Invalid/Tampered Token (Protected Route -> 401 UNAUTHORIZED)
+GET {{gatewayUrl}}/api/v1/doctors
+Authorization: Bearer invalid-malformed-token
+Accept: application/json
+
+### 4. Fetch Patient Directory through Gateway (Routed to Patient Service :8082)
+GET {{gatewayUrl}}/api/v1/patients?page=0&size=10
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 5. Fetch Doctor Directory through Gateway (Routed to Doctor Service :8083)
+GET {{gatewayUrl}}/api/v1/doctors?page=0&size=10
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 6. Book Appointment through Gateway (Routed to Appointment Service :8084)
+POST {{gatewayUrl}}/api/v1/appointments
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "patientId": "c0436a7c-67a8-451e-b733-fc3082c43262",
+  "doctorId": "a7a04e33-3575-422c-837f-5a5a27dbc1f7",
+  "startTime": "2026-10-25T10:00:00Z",
+  "endTime": "2026-10-25T10:30:00Z"
+}
+
+### 7. Record Consultation through Gateway (Routed to Consultation Service :8085)
+POST {{gatewayUrl}}/api/v1/consultations
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "appointmentId": "0cb1d59d-b013-46e0-ae31-88e5faaac394",
+  "patientId": "c0436a7c-67a8-451e-b733-fc3082c43262",
+  "doctorId": "a7a04e33-3575-422c-837f-5a5a27dbc1f7",
+  "chiefComplaint": "Routine checkup via API Gateway",
+  "diagnosis": "Healthy",
+  "clinicalNotes": "Gateway security context forwarding verified.",
+  "vitals": {
+    "temperatureCelsius": 36.6,
+    "systolicBp": 120,
+    "diastolicBp": 80,
+    "pulseRateBpm": 70,
+    "respiratoryRate": 16,
+    "oxygenSaturationPct": 99.0
+  }
+}

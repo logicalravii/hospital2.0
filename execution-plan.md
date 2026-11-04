@@ -17,8 +17,8 @@ This document tracks the step-by-step implementation of the Hospital Management 
 | **6** | Doctor Service (`doctor-service` :8083) | `COMPLETED` | Profiles, Schedules, Flyway `V1`, 19 tests pass, slot queries verified |
 | **7** | Appointment Service (`appointment-service` :8084) | `COMPLETED` | Booking FSM, Outbox Pattern, Kafka & REST verified, 22 tests pass |
 | **8** | Consultation Service (`consultation-service` :8085) | `COMPLETED` | Clinical encounters, Vitals JSONB, Kafka event, 31 tests pass |
-| **9** | API Gateway (`api-gateway` :8080) | `NOT STARTED` | Spring Cloud Gateway routing & header forward |
-| **10** | End-to-End Verification & Verification Suite | `NOT STARTED` | Full flow smoke testing across gateway |
+| **9** | API Gateway (`api-gateway` :8080) | `COMPLETED` | Edge routing, JWT validation & header forward, 18 tests pass |
+| **10** | End-to-End Verification & Verification Suite | `COMPLETED` | All 8 containers orchestrated, 13/13 e2e gateway checks pass |
 
 ---
 
@@ -156,15 +156,35 @@ This document tracks the step-by-step implementation of the Hospital Management 
 ---
 
 ### Step 9: API Gateway (`services/api-gateway` — Port 8080)
-- [ ] Create `services/api-gateway/pom.xml` with Spring Cloud Gateway dependency.
-- [ ] Configure routes routing `/api/v1/**` to the respective microservices (`8081`–`8085`).
-- [ ] Implement JWT verification filter and downstream header propagation (`X-User-Id`, `X-User-Roles`).
-- [ ] **Verification**: Send requests to port `8080` and verify routing to underlying services.
+- [x] Create `services/api-gateway/pom.xml` with Spring Cloud Gateway dependency.
+- [x] Configure routes routing `/api/v1/**` to the respective microservices (`8081`–`8085`).
+- [x] Implement JWT verification filter and downstream header propagation (`X-User-Id`, `X-User-Roles`, `X-User-Name`).
+- [x] Implement centralized `GatewayExceptionHandler` returning standardized `ApiErrorResponse` on downstream timeouts, 404s, and connection drops.
+- [x] Add 18 automated unit and slice/integration tests with `WebTestClient`.
+- [x] **Verification**:
+  - Unauthenticated calls to protected routes rejected with HTTP 401 (`UNAUTHORIZED`).
+  - Tampered/invalid tokens rejected with HTTP 401.
+  - Valid tokens authenticated, spoofed headers sanitized, and downstream identity context populated.
+  - Saved HTTP test collection in [docs/api-test/gateway/api-test.HTTP](file:///Users/ravikumar/Test_Application/hospital/docs/api-test/gateway/api-test.HTTP).
 
 ---
 
 ### Step 10: End-to-End System Verification
-- [ ] Add multi-stage Dockerfiles for all services.
-- [ ] Update [docker-compose.yml](file:///Users/ravikumar/Test_Application/hospital/docker-compose.yml) with all service containers and dependencies.
-- [ ] Execute automated full patient journey smoke test through the API Gateway:
-  - Staff Login -> Register Patient -> Register Doctor -> Configure Schedule -> Book Appointment -> Record Consultation -> Verify Appointment marked Completed.
+- [x] Add multi-stage Dockerfiles for all services (`identity-service`, `patient-service`, `doctor-service`, `appointment-service`, `consultation-service`, `api-gateway`).
+- [x] Update [docker-compose.yml](file:///Users/ravikumar/Test_Application/hospital/docker-compose.yml) with all service containers, internal network `hms-network`, environment configurations, and healthcheck dependencies.
+- [x] Create automated end-to-end smoke test suite in [scripts/smoke-test-e2e.sh](file:///Users/ravikumar/Test_Application/hospital/scripts/smoke-test-e2e.sh).
+- [x] Execute automated full patient journey smoke test through the API Gateway (`:8080`):
+  - [x] Unauthenticated request rejection (HTTP 401 Unauthorized).
+  - [x] Staff User Registration -> `POST /api/v1/auth/register` (HTTP 201).
+  - [x] Staff Authentication -> `POST /api/v1/auth/login` (HTTP 200 + JWT token issuance).
+  - [x] Patient Registration -> `POST /api/v1/patients` (HTTP 201 + generated MRN).
+  - [x] Doctor Profile Registration -> `POST /api/v1/doctors` (HTTP 201).
+  - [x] Doctor Weekly Schedule Configuration -> `POST /api/v1/doctors/{id}/schedules` (HTTP 201).
+  - [x] Doctor Available Slots Query -> `GET /api/v1/doctors/{id}/slots?date=...` (HTTP 200).
+  - [x] Appointment Booking -> `POST /api/v1/appointments` (HTTP 202 + status `PENDING_VALIDATION`).
+  - [x] Asynchronous Kafka Doctor Schedule Booking Saga -> verified auto-transition to `CONFIRMED`.
+  - [x] Start Appointment -> `POST /api/v1/appointments/{id}/start` (HTTP 200 + status `IN_PROGRESS`).
+  - [x] Clinical Consultation Recording -> `POST /api/v1/consultations` (HTTP 201 + vitals JSONB + `ConsultationCompletedEvent` emitted to Kafka).
+  - [x] Asynchronous Kafka Consultation Event Propagation -> verified `appointment-service` auto-completes appointment to `COMPLETED`.
+  - [x] Patient Consultation History Query -> `GET /api/v1/consultations?patientId=...` (HTTP 200).
+- [x] **Verification**: All 13/13 end-to-end verification checks executed against running Docker containers through the API Gateway port 8080 and passed cleanly.

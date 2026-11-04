@@ -1,0 +1,71 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  autoconfigure:
+    exclude:
+      - org.springframework.cloud.autoconfigure.RefreshAutoConfiguration
+      - org.springframework.cloud.client.discovery.simple.SimpleDiscoveryClientAutoConfiguration
+      - org.springframework.cloud.client.discovery.simple.reactive.SimpleReactiveDiscoveryClientAutoConfiguration
+      - org.springframework.cloud.client.discovery.composite.CompositeDiscoveryClientAutoConfiguration
+      - org.springframework.cloud.client.discovery.composite.reactive.ReactiveCompositeDiscoveryClientAutoConfiguration
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    discovery:
+      enabled: false
+    gateway:
+      forwarded:
+        enabled: false
+      x-forwarded:
+        enabled: false
+      routes:
+        - id: identity-service
+          uri: ${SERVICES_IDENTITY_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/auth/**
+
+        - id: patient-service
+          uri: ${SERVICES_PATIENT_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/patients/**
+
+        - id: doctor-service
+          uri: ${SERVICES_DOCTOR_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/doctors/**
+
+        - id: appointment-service
+          uri: ${SERVICES_APPOINTMENT_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/appointments/**
+
+        - id: consultation-service
+          uri: ${SERVICES_CONSULTATION_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/v1/consultations/**
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders: "*"
+
+hms:
+  jwt:
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+
+logging:
+  level:
+    root: INFO
+    com.management.hospital: DEBUG
+    org.springframework.cloud.gateway: INFO
