@@ -2,6 +2,7 @@ package com.management.hospital.doctor.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.management.hospital.common.error.ResourceNotFoundException;
+import com.management.hospital.common.security.SecurityHeaders;
 import com.management.hospital.doctor.api.dto.AvailableSlotsResponse;
 import com.management.hospital.doctor.api.dto.CreateDoctorRequest;
 import com.management.hospital.doctor.api.dto.CreateScheduleRequest;
@@ -10,6 +11,7 @@ import com.management.hospital.doctor.api.dto.DoctorScheduleResponse;
 import com.management.hospital.doctor.application.DoctorService;
 import com.management.hospital.doctor.domain.Specialty;
 import com.management.hospital.doctor.domain.TimeSlot;
+import com.management.hospital.doctor.infrastructure.SecurityConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,16 +38,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(DoctorController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class})
 class DoctorControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    private static final String TEST_USER_ID = UUID.randomUUID().toString();
+
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @MockitoBean
     private DoctorService doctorService;
+
+    @Test
+    @DisplayName("Direct access without gateway user context should return 401 UNAUTHORIZED")
+    void shouldRejectDirectAccessWithoutGatewayHeaders() throws Exception {
+        mockMvc.perform(get("/api/v1/doctors/{id}", UUID.randomUUID()))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.message").value("Direct access prohibited: missing authenticated user context from API Gateway"));
+    }
 
     @Test
     @DisplayName("POST /api/v1/doctors should return 201 on valid doctor registration")
@@ -82,6 +95,7 @@ class DoctorControllerTest {
         );
 
         mockMvc.perform(post("/api/v1/doctors")
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
@@ -115,6 +129,7 @@ class DoctorControllerTest {
             """;
 
         mockMvc.perform(post("/api/v1/doctors")
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json))
             .andExpect(status().isCreated())
@@ -137,6 +152,7 @@ class DoctorControllerTest {
         );
 
         mockMvc.perform(post("/api/v1/doctors")
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest())
@@ -157,7 +173,8 @@ class DoctorControllerTest {
 
         when(doctorService.getDoctorById(id)).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/doctors/{id}", id))
+        mockMvc.perform(get("/api/v1/doctors/{id}", id)
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(id.toString()))
             .andExpect(jsonPath("$.fullName").value("Gregory House"));
@@ -169,7 +186,8 @@ class DoctorControllerTest {
         UUID id = UUID.randomUUID();
         when(doctorService.getDoctorById(id)).thenThrow(new ResourceNotFoundException("Doctor", id));
 
-        mockMvc.perform(get("/api/v1/doctors/{id}", id))
+        mockMvc.perform(get("/api/v1/doctors/{id}", id)
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
     }
@@ -196,6 +214,7 @@ class DoctorControllerTest {
         );
 
         mockMvc.perform(post("/api/v1/doctors/{id}/schedules", doctorId)
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
@@ -221,6 +240,7 @@ class DoctorControllerTest {
         when(doctorService.getAvailableSlotsForDate(doctorId, date)).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/doctors/{id}/slots", doctorId)
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                 .param("date", "2026-09-21"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.doctorId").value(doctorId.toString()))

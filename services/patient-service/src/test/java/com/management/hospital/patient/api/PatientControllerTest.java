@@ -2,10 +2,12 @@ package com.management.hospital.patient.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.management.hospital.common.error.ResourceNotFoundException;
+import com.management.hospital.common.security.SecurityHeaders;
 import com.management.hospital.patient.api.dto.CreatePatientRequest;
 import com.management.hospital.patient.api.dto.PatientResponse;
 import com.management.hospital.patient.application.PatientService;
 import com.management.hospital.patient.domain.Gender;
+import com.management.hospital.patient.infrastructure.SecurityConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,16 +29,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PatientController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class})
 class PatientControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    private static final String TEST_USER_ID = UUID.randomUUID().toString();
+
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @MockitoBean
     private PatientService patientService;
+
+    @Test
+    @DisplayName("Direct access without gateway user context should return 401 UNAUTHORIZED")
+    void shouldRejectDirectAccessWithoutGatewayHeaders() throws Exception {
+        mockMvc.perform(get("/api/v1/patients/{id}", UUID.randomUUID()))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.message").value("Direct access prohibited: missing authenticated user context from API Gateway"));
+    }
 
     @Test
     @DisplayName("POST /api/v1/patients should return 201 on valid patient registration")
@@ -75,6 +88,7 @@ class PatientControllerTest {
         );
 
         mockMvc.perform(post("/api/v1/patients")
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
@@ -97,6 +111,7 @@ class PatientControllerTest {
         );
 
         mockMvc.perform(post("/api/v1/patients")
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest())
@@ -116,7 +131,8 @@ class PatientControllerTest {
 
         when(patientService.getPatientById(id)).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/patients/{id}", id))
+        mockMvc.perform(get("/api/v1/patients/{id}", id)
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(id.toString()))
             .andExpect(jsonPath("$.firstName").value("Jane"));
@@ -128,7 +144,8 @@ class PatientControllerTest {
         UUID id = UUID.randomUUID();
         when(patientService.getPatientById(id)).thenThrow(new ResourceNotFoundException("Patient", id));
 
-        mockMvc.perform(get("/api/v1/patients/{id}", id))
+        mockMvc.perform(get("/api/v1/patients/{id}", id)
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
     }
@@ -145,7 +162,8 @@ class PatientControllerTest {
 
         when(patientService.getPatientByMrn(mrn)).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/patients/mrn/{mrn}", mrn))
+        mockMvc.perform(get("/api/v1/patients/mrn/{mrn}", mrn)
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.mrn").value(mrn))
             .andExpect(jsonPath("$.firstName").value("Jane"));

@@ -6,7 +6,9 @@ import com.management.hospital.appointment.api.dto.BookAppointmentRequest;
 import com.management.hospital.appointment.api.dto.CancelAppointmentRequest;
 import com.management.hospital.appointment.application.AppointmentService;
 import com.management.hospital.appointment.domain.AppointmentStatus;
+import com.management.hospital.appointment.infrastructure.SecurityConfig;
 import com.management.hospital.common.error.ResourceNotFoundException;
+import com.management.hospital.common.security.SecurityHeaders;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,16 +32,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AppointmentController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class})
 class AppointmentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    private static final String TEST_USER_ID = UUID.randomUUID().toString();
+
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @MockitoBean
     private AppointmentService appointmentService;
+
+    @Test
+    @DisplayName("Direct access without gateway user context should return 401 UNAUTHORIZED")
+    void shouldRejectDirectAccessWithoutGatewayHeaders() throws Exception {
+        mockMvc.perform(get("/api/v1/appointments/{id}", UUID.randomUUID()))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.message").value("Direct access prohibited: missing authenticated user context from API Gateway"));
+    }
 
     @Test
     @DisplayName("POST /api/v1/appointments should return 201 on valid appointment booking")
@@ -64,6 +77,7 @@ class AppointmentControllerTest {
         );
 
         mockMvc.perform(post("/api/v1/appointments")
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isAccepted())
@@ -86,6 +100,7 @@ class AppointmentControllerTest {
             """;
 
         mockMvc.perform(post("/api/v1/appointments")
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidJson))
             .andExpect(status().isBadRequest())
@@ -110,6 +125,7 @@ class AppointmentControllerTest {
         CancelAppointmentRequest request = new CancelAppointmentRequest("Schedule conflict");
 
         mockMvc.perform(post("/api/v1/appointments/{id}/cancel", id)
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
@@ -131,7 +147,8 @@ class AppointmentControllerTest {
 
         when(appointmentService.getAppointmentById(id)).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/appointments/{id}", id))
+        mockMvc.perform(get("/api/v1/appointments/{id}", id)
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(id.toString()))
             .andExpect(jsonPath("$.status").value("CONFIRMED"));
@@ -143,7 +160,8 @@ class AppointmentControllerTest {
         UUID id = UUID.randomUUID();
         when(appointmentService.getAppointmentById(id)).thenThrow(new ResourceNotFoundException("Appointment", id));
 
-        mockMvc.perform(get("/api/v1/appointments/{id}", id))
+        mockMvc.perform(get("/api/v1/appointments/{id}", id)
+                .header(SecurityHeaders.USER_ID, TEST_USER_ID))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
     }

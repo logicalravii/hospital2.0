@@ -19,6 +19,7 @@ This document tracks the step-by-step implementation of the Hospital Management 
 | **8** | Consultation Service (`consultation-service` :8085) | `COMPLETED` | Clinical encounters, Vitals JSONB, Kafka event, 31 tests pass |
 | **9** | API Gateway (`api-gateway` :8080) | `COMPLETED` | Edge routing, JWT validation & header forward, 18 tests pass |
 | **10** | End-to-End Verification & Verification Suite | `COMPLETED` | All 8 containers orchestrated, 13/13 e2e gateway checks pass |
+| **11** | Single Entry Point & Perimeter Security Enforcement | `COMPLETED` | Microservice host ports unmapped; `GatewayContextFilter` deployed |
 
 ---
 
@@ -188,3 +189,15 @@ This document tracks the step-by-step implementation of the Hospital Management 
   - [x] Asynchronous Kafka Consultation Event Propagation -> verified `appointment-service` auto-completes appointment to `COMPLETED`.
   - [x] Patient Consultation History Query -> `GET /api/v1/consultations?patientId=...` (HTTP 200).
 - [x] **Verification**: All 13/13 end-to-end verification checks executed against running Docker containers through the API Gateway port 8080 and passed cleanly.
+
+---
+
+### Step 11: Single Entry Point & Perimeter Security Enforcement
+- [x] Created `GatewayContextFilter` in `common` module to enforce authenticated gateway context (`X-User-Id` header) and reject unauthorized direct requests with HTTP 401 (`UNAUTHORIZED`).
+- [x] Registered `GatewayContextFilter` across all downstream microservices via `SecurityConfig` (`patient-service`, `doctor-service`, `appointment-service`, `consultation-service`).
+- [x] Added unit & slice tests verifying that unauthenticated direct requests are rejected with 401 and valid gateway-routed requests are accepted.
+- [x] Removed microservice host port bindings (`8081`–`8085`) from `docker-compose.yml`, exposing solely the API Gateway on port `8080` to the host network.
+- [x] Rebuilt Docker images and validated with live `curl` tests that direct host connections to microservice ports (`8081`–`8085`) are refused.
+- [x] Executed full automated test suite: all 144 unit and integration tests passing.
+- [x] Verified full 13/13 end-to-end smoke test suite passing through API Gateway (`:8080`).
+

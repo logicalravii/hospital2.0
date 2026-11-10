@@ -3,10 +3,12 @@ package com.management.hospital.consultation.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.management.hospital.common.error.ConflictException;
 import com.management.hospital.common.error.ResourceNotFoundException;
+import com.management.hospital.common.security.SecurityHeaders;
 import com.management.hospital.consultation.api.dto.ConsultationResponse;
 import com.management.hospital.consultation.api.dto.RecordConsultationRequest;
 import com.management.hospital.consultation.api.dto.VitalsDto;
 import com.management.hospital.consultation.application.ConsultationService;
+import com.management.hospital.consultation.infrastructure.SecurityConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,16 +33,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ConsultationController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class})
 class ConsultationControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    private static final String TEST_USER_ID = UUID.randomUUID().toString();
+
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @MockitoBean
     private ConsultationService consultationService;
+
+    @Test
+    @DisplayName("Direct access without gateway user context should return 401 UNAUTHORIZED")
+    void shouldRejectDirectAccessWithoutGatewayHeaders() throws Exception {
+        mockMvc.perform(get("/api/v1/consultations/{id}", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("Direct access prohibited: missing authenticated user context from API Gateway"));
+    }
 
     @Test
     @DisplayName("POST /api/v1/consultations should return 201 on valid consultation recording")
@@ -76,6 +89,7 @@ class ConsultationControllerTest {
         when(consultationService.recordConsultation(any(RecordConsultationRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/consultations")
+                        .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -100,6 +114,7 @@ class ConsultationControllerTest {
         );
 
         mockMvc.perform(post("/api/v1/consultations")
+                        .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -129,6 +144,7 @@ class ConsultationControllerTest {
                 .thenThrow(new ConflictException("Consultation has already been recorded for appointment: " + appointmentId));
 
         mockMvc.perform(post("/api/v1/consultations")
+                        .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -159,7 +175,8 @@ class ConsultationControllerTest {
 
         when(consultationService.getConsultationById(id)).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/consultations/{id}", id))
+        mockMvc.perform(get("/api/v1/consultations/{id}", id)
+                        .header(SecurityHeaders.USER_ID, TEST_USER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
                 .andExpect(jsonPath("$.diagnosis").value("Pharyngitis"));
@@ -172,7 +189,8 @@ class ConsultationControllerTest {
         when(consultationService.getConsultationById(id))
                 .thenThrow(new ResourceNotFoundException("Consultation", id));
 
-        mockMvc.perform(get("/api/v1/consultations/{id}", id))
+        mockMvc.perform(get("/api/v1/consultations/{id}", id)
+                        .header(SecurityHeaders.USER_ID, TEST_USER_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
     }
@@ -196,7 +214,8 @@ class ConsultationControllerTest {
 
         when(consultationService.getConsultationByAppointmentId(appointmentId)).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/consultations/appointment/{appointmentId}", appointmentId))
+        mockMvc.perform(get("/api/v1/consultations/appointment/{appointmentId}", appointmentId)
+                        .header(SecurityHeaders.USER_ID, TEST_USER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appointmentId").value(appointmentId.toString()))
                 .andExpect(jsonPath("$.diagnosis").value("Type 2 Diabetes Mellitus"));
@@ -223,6 +242,7 @@ class ConsultationControllerTest {
                 .thenReturn(new PageImpl<>(List.of(response)));
 
         mockMvc.perform(get("/api/v1/consultations")
+                        .header(SecurityHeaders.USER_ID, TEST_USER_ID)
                         .param("patientId", patientId.toString())
                         .param("page", "0")
                         .param("size", "10"))

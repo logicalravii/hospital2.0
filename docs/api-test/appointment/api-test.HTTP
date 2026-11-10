@@ -14,8 +14,8 @@ Content-Type: application/json
   "patientId": "{{patientId}}",
   "doctorId": "{{doctor2}}",
   "appointmentDate": "2027-01-04",
-  "startTime": "09:30:00",
-  "endTime": "10:00:00",
+  "startTime": "10:00:00",
+  "endTime": "10:30:00",
   "reason": "Follow-up consultation for persistent headaches"
 }
 

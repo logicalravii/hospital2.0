@@ -6,8 +6,8 @@ POST {{baseUrl}}/api/v1/auth/register
 Content-Type: application/json
 
 {
-  "username": "dr_smith",
-  "email": "dr.smith@hospital.com",
+  "username": "j_john",
+  "email": "j_john@hospital.com",
   "password": "Password@123",
   "roles": [
     "DOCTOR"
@@ -46,7 +46,7 @@ POST {{baseUrl}}/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "usernameOrEmail": "dr_smith",
+  "usernameOrEmail": "j_john",
   "password": "Password@123"
 }
 

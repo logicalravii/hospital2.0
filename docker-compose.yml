@@ -59,8 +59,6 @@ services:
       dockerfile: services/identity-service/Dockerfile
     container_name: hms-identity-service
     restart: unless-stopped
-    ports:
-      - "8081:8081"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/identity_db
       SPRING_DATASOURCE_USERNAME: hms_user
@@ -79,8 +77,6 @@ services:
       dockerfile: services/patient-service/Dockerfile
     container_name: hms-patient-service
     restart: unless-stopped
-    ports:
-      - "8082:8082"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/patient_db
       SPRING_DATASOURCE_USERNAME: hms_user
@@ -100,8 +96,6 @@ services:
       dockerfile: services/doctor-service/Dockerfile
     container_name: hms-doctor-service
     restart: unless-stopped
-    ports:
-      - "8083:8083"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/doctor_db
       SPRING_DATASOURCE_USERNAME: hms_user
@@ -121,8 +115,6 @@ services:
       dockerfile: services/appointment-service/Dockerfile
     container_name: hms-appointment-service
     restart: unless-stopped
-    ports:
-      - "8084:8084"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/appointment_db
       SPRING_DATASOURCE_USERNAME: hms_user
@@ -145,8 +137,6 @@ services:
       dockerfile: services/consultation-service/Dockerfile
     container_name: hms-consultation-service
     restart: unless-stopped
-    ports:
-      - "8085:8085"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/consultation_db
       SPRING_DATASOURCE_USERNAME: hms_user

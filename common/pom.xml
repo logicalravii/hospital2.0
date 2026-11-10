@@ -43,6 +43,13 @@
 			<artifactId>jjwt-api</artifactId>
 		</dependency>
 
+		<!-- Servlet API (provided by downstream WebMVC containers) -->
+		<dependency>
+			<groupId>jakarta.servlet</groupId>
+			<artifactId>jakarta.servlet-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
 		<!-- Testing -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
