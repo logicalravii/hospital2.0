@@ -52,11 +52,20 @@ public class OutboxEvent {
     @Column(name = "processed_at")
     private Instant processedAt;
 
+    /** W3C traceparent of the request that produced this event; null if none was active. */
+    @Column(name = "trace_parent", length = 55, updatable = false)
+    private String traceParent;
+
     protected OutboxEvent() {
         // Required by JPA
     }
 
     public OutboxEvent(String aggregateType, UUID aggregateId, String eventType, String payloadClass, String topic, String payload) {
+        this(aggregateType, aggregateId, eventType, payloadClass, topic, payload, null);
+    }
+
+    public OutboxEvent(String aggregateType, UUID aggregateId, String eventType, String payloadClass, String topic,
+                       String payload, String traceParent) {
         this.id = UUID.randomUUID();
         this.aggregateType = Objects.requireNonNull(aggregateType, "Aggregate type is required");
         this.aggregateId = Objects.requireNonNull(aggregateId, "Aggregate ID is required");
@@ -67,6 +76,7 @@ public class OutboxEvent {
         this.status = OutboxStatus.PENDING;
         this.retryCount = 0;
         this.createdAt = Instant.now();
+        this.traceParent = traceParent;
     }
 
     public void markPublished() {
@@ -123,5 +133,9 @@ public class OutboxEvent {
 
     public Instant getProcessedAt() {
         return processedAt;
+    }
+
+    public String getTraceParent() {
+        return traceParent;
     }
 }

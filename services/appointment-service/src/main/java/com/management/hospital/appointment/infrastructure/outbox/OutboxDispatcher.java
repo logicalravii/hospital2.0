@@ -23,14 +23,17 @@ public class OutboxDispatcher {
     private final OutboxEventRepository outboxEventRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final OutboxTracePropagation tracePropagation;
 
     public OutboxDispatcher(
             OutboxEventRepository outboxEventRepository,
             KafkaTemplate<String, Object> kafkaTemplate,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            OutboxTracePropagation tracePropagation) {
         this.outboxEventRepository = outboxEventRepository;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
+        this.tracePropagation = tracePropagation;
     }
 
     /**
@@ -73,18 +76,21 @@ public class OutboxDispatcher {
             Class<?> targetClass = Class.forName(outboxEvent.getPayloadClass());
             Object eventObj = objectMapper.readValue(outboxEvent.getPayload(), targetClass);
 
-            kafkaTemplate.send(outboxEvent.getTopic(), outboxEvent.getAggregateId().toString(), eventObj)
-                    .whenComplete((result, ex) -> {
-                        if (ex == null) {
-                            markPublishedInNewTx(outboxEvent.getId());
-                            log.info("Successfully published outbox event {} to topic {}",
-                                    outboxEvent.getId(), outboxEvent.getTopic());
-                        } else {
-                            recordFailureInNewTx(outboxEvent.getId(), ex.getMessage());
-                            log.warn("Failed to publish outbox event {} to Kafka: {}",
-                                    outboxEvent.getId(), ex.getMessage());
-                        }
-                    });
+            // Re-enter the originating request's trace so the Kafka record carries its traceparent,
+            // even when this runs later on the poller thread.
+            tracePropagation.runInStoredTrace(outboxEvent.getTraceParent(), () ->
+                    kafkaTemplate.send(outboxEvent.getTopic(), outboxEvent.getAggregateId().toString(), eventObj)
+                            .whenComplete((result, ex) -> {
+                                if (ex == null) {
+                                    markPublishedInNewTx(outboxEvent.getId());
+                                    log.info("Successfully published outbox event {} to topic {}",
+                                            outboxEvent.getId(), outboxEvent.getTopic());
+                                } else {
+                                    recordFailureInNewTx(outboxEvent.getId(), ex.getMessage());
+                                    log.warn("Failed to publish outbox event {} to Kafka: {}",
+                                            outboxEvent.getId(), ex.getMessage());
+                                }
+                            }));
         } catch (Exception ex) {
             recordFailureInNewTx(outboxEvent.getId(), ex.getMessage());
             log.error("Error preparing outbox event {} for dispatch: {}", outboxEvent.getId(), ex.getMessage(), ex);

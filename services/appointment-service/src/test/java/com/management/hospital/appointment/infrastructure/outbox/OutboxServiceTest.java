@@ -3,6 +3,8 @@ package com.management.hospital.appointment.infrastructure.outbox;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.management.hospital.common.event.AppointmentInitiatedEvent;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,7 +38,8 @@ class OutboxServiceTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        outboxService = new OutboxService(outboxEventRepository, objectMapper, applicationEventPublisher);
+        outboxService = new OutboxService(outboxEventRepository, objectMapper, applicationEventPublisher,
+                new OutboxTracePropagation(Tracer.NOOP, Propagator.NOOP));
     }
 
     @Test

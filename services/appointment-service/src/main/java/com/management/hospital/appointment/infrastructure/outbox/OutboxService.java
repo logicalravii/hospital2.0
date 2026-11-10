@@ -19,14 +19,17 @@ public class OutboxService {
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final OutboxTracePropagation tracePropagation;
 
     public OutboxService(
             OutboxEventRepository outboxEventRepository,
             ObjectMapper objectMapper,
-            ApplicationEventPublisher applicationEventPublisher) {
+            ApplicationEventPublisher applicationEventPublisher,
+            OutboxTracePropagation tracePropagation) {
         this.outboxEventRepository = outboxEventRepository;
         this.objectMapper = objectMapper;
         this.applicationEventPublisher = applicationEventPublisher;
+        this.tracePropagation = tracePropagation;
     }
 
     /**
@@ -43,7 +46,8 @@ public class OutboxService {
                     eventType,
                     event.getClass().getName(),
                     topic,
-                    payload
+                    payload,
+                    tracePropagation.captureCurrentTraceParent().orElse(null)
             );
 
             OutboxEvent saved = outboxEventRepository.save(outboxEvent);

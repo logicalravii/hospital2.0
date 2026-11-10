@@ -14,7 +14,9 @@ public class SecurityConfig {
         FilterRegistrationBean<GatewayContextFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new GatewayContextFilter());
         registration.addUrlPatterns("/api/*");
-        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        // Run just after Spring Boot's HTTP observation filter (HIGHEST_PRECEDENCE + 1) so that
+        // rejected direct requests are still traced and their 401 body carries a traceId.
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 2);
         return registration;
     }
 }

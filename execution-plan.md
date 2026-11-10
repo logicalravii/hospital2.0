@@ -20,6 +20,7 @@ This document tracks the step-by-step implementation of the Hospital Management 
 | **9** | API Gateway (`api-gateway` :8080) | `COMPLETED` | Edge routing, JWT validation & header forward, 18 tests pass |
 | **10** | End-to-End Verification & Verification Suite | `COMPLETED` | All 8 containers orchestrated, 13/13 e2e gateway checks pass |
 | **11** | Single Entry Point & Perimeter Security Enforcement | `COMPLETED` | Microservice host ports unmapped; `GatewayContextFilter` deployed |
+| **12** | Distributed Tracing (Trace ID) | `COMPLETED` | W3C trace context across gateway, services, Kafka & outbox; `traceId` in logs and error bodies; 160 tests pass |
 
 ---
 
@@ -201,3 +202,15 @@ This document tracks the step-by-step implementation of the Hospital Management 
 - [x] Executed full automated test suite: all 144 unit and integration tests passing.
 - [x] Verified full 13/13 end-to-end smoke test suite passing through API Gateway (`:8080`).
 
+---
+
+### Step 12: Distributed Tracing (Trace ID)
+- [x] Added Micrometer Tracing with the OpenTelemetry bridge (`spring-boot-micrometer-tracing-opentelemetry`, `micrometer-tracing-bridge-otel`) to all six applications. No exporter/collector yet: trace and span IDs appear in every log line via Spring Boot's default correlation pattern.
+- [x] Sampling set to `1.0` (override with `TRACING_SAMPLING_PROBABILITY`).
+- [x] API Gateway: `TracePropagationFilter` injects the request span's W3C `traceparent` into the proxied request (the Spring Cloud Gateway 4.2 observability auto-config does not activate on Boot 4) and returns `X-Trace-Id` to the caller. `spring.reactor.context-propagation=auto` so gateway logs and error bodies carry the trace ID.
+- [x] Downstream services: `GatewayContextFilter` now runs after Spring's HTTP observation filter, so rejected direct requests are traced too.
+- [x] Kafka: `spring.kafka.template/listener.observation-enabled=true` in patient, doctor, appointment and consultation services; trace context travels in record headers.
+- [x] Appointment outbox: Flyway `V3__add_outbox_trace_parent.sql` adds `outbox_event.trace_parent`; `OutboxTracePropagation` captures it on save and re-enters that trace on dispatch (immediate or poller), so events stay in the originating request's trace.
+- [x] `ApiErrorResponse` gains an optional `traceId` (read from the logging MDC; omitted when no trace is active).
+- [x] Tests: outbox trace capture/restore with a real OTel tracer, gateway propagation/`X-Trace-Id`/401/503 integration tests against a stub downstream, MVC tracing slice test in `patient-service`, `ApiErrorResponse` MDC tests. Full suite: 160 tests passing.
+- [x] **Verification (live Docker)**: rebuilt all images; 13/13 smoke checks pass. One booking request's trace ID appears in appointment-service (HTTP + outbox save + Kafka publish + saga reply), doctor-service (Kafka consumer + reply publish) and consultation-service (projection consumer); a consultation request's trace ID appears in consultation-service and in appointment-service's completion consumer. `outbox_event.trace_parent` populated; Flyway V3 applied. Gateway 401 and service 404 bodies carry `traceId` matching `X-Trace-Id`.

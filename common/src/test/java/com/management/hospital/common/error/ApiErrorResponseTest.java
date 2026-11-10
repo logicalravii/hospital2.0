@@ -2,6 +2,8 @@ package com.management.hospital.common.error;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Map;
 
@@ -43,5 +45,27 @@ class ApiErrorResponseTest {
 
         assertThatThrownBy(() -> response.fieldErrors().put("newField", "error"))
             .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    @DisplayName("Should carry the current trace ID from the logging MDC")
+    void shouldCarryTraceIdFromMdc() {
+        try (MDC.MDCCloseable ignored = MDC.putCloseable(ApiErrorResponse.TRACE_ID_MDC_KEY, "4bf92f3577b34da6a3ce929d0e0e4736")) {
+            ApiErrorResponse response = new ApiErrorResponse(ErrorCode.RESOURCE_NOT_FOUND, "Patient not found", "/api/v1/patients/123");
+
+            assertThat(response.traceId()).isEqualTo("4bf92f3577b34da6a3ce929d0e0e4736");
+        }
+    }
+
+    @Test
+    @DisplayName("Should omit traceId from JSON when no trace is active")
+    void shouldOmitTraceIdWhenNoTraceActive() throws Exception {
+        MDC.remove(ApiErrorResponse.TRACE_ID_MDC_KEY);
+        ApiErrorResponse response = new ApiErrorResponse(ErrorCode.RESOURCE_NOT_FOUND, "Patient not found", "/api/v1/patients/123");
+
+        String json = new ObjectMapper().findAndRegisterModules().writeValueAsString(response);
+
+        assertThat(response.traceId()).isNull();
+        assertThat(json).doesNotContain("traceId");
     }
 }

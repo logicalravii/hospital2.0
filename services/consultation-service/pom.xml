@@ -21,6 +21,16 @@
 			<artifactId>common</artifactId>
 		</dependency>
 
+		<!-- Distributed tracing: Micrometer Tracing with OpenTelemetry bridge (trace IDs in logs, W3C propagation; no exporter) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-micrometer-tracing-opentelemetry</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-tracing-bridge-otel</artifactId>
+		</dependency>
+
 		<!-- Spring Boot WebMVC & Data JPA -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
